@@ -1,5 +1,5 @@
 # Algorithms-Plus
-## Implementations of some importtant or interesting algos.
+## Implementations of some important or interesting algos.
 
 # 算法实现练习
 > * 2020.3.6
