@@ -1,9 +1,12 @@
 #pragma once
+#ifndef ALGO_HPP
+#define ALGO_HPP
+
 #include <iostream>
 #include <cmath>
 #include <vector>
 
-int fastPowerMod(int base, int expo, int M) {
+static int fastPowerMod(int base, int expo, int M) {
 	int A = (expo & 1) == 1 ? base % M : 1, K = base % M;
 	while (expo) {
 		K = (K * K) % M;							//K迭代式计算
@@ -12,3 +15,33 @@ int fastPowerMod(int base, int expo, int M) {
 	}
 	return A;
 }
+
+///@brief Warshall 算法的回顾
+static void Warshall(const int size, std::vector<std::vector<int> > map) {
+	printf("Algorithm started.Input:\n");
+	for (int i = 0; i < size; ++i) {
+		printf("[");
+		for (int j = 0; j < size - 1; ++j) {
+			printf("%d, ", map[i][j]);
+		}
+		printf("%d]\n", map[i][size - 1]);
+	}
+	printf("\n");
+	for (int k = 0; k < size; ++k) {
+		for (int i = 0; i < size; ++i) {
+			for (int j = 0; j < size; ++j) {
+				map[i][j] = map[i][j] | (map[i][k] & map[k][j]);
+			}
+		}
+	}
+	printf("Algorithm completed. Result:\n");
+	for (int i = 0; i < size; ++i) {
+		printf("[");
+		for (int j = 0; j < size - 1; ++j) {
+			printf("%d, ", map[i][j]);
+		}
+		printf("%d]\n", map[i][size - 1]);
+	}
+}
+
+#endif //ALGO_HPP
