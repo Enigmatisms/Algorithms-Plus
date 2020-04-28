@@ -9,14 +9,14 @@
 static int fastPowerMod(int base, int expo, int M) {
 	int A = (expo & 1) == 1 ? base % M : 1, K = base % M;
 	while (expo) {
-		K = (K * K) % M;							//Kµü´úÊ½¼ÆËã
-		A = (A * ((expo & 1) == 1 ? K : 1)) % M;	//Aµü´úÊ½¼ÆËã
+		K = (K * K) % M;							//Kï¿½ï¿½ï¿½ï¿½Ê½ï¿½ï¿½ï¿½ï¿½
+		A = (A * ((expo & 1) == 1 ? K : 1)) % M;	//Aï¿½ï¿½ï¿½ï¿½Ê½ï¿½ï¿½ï¿½ï¿½
 		expo >>= 1;
 	}
 	return A;
 }
 
-///@brief Warshall Ëã·¨µÄ»Ø¹Ë
+///@brief Warshall ï¿½ã·¨ï¿½Ä»Ø¹ï¿½
 static void Warshall(const int size, std::vector<std::vector<int> > map) {
 	printf("Algorithm started.Input:\n");
 	for (int i = 0; i < size; ++i) {
@@ -43,5 +43,7 @@ static void Warshall(const int size, std::vector<std::vector<int> > map) {
 		printf("%d]\n", map[i][size - 1]);
 	}
 }
+
+
 
 #endif //ALGO_HPP

@@ -1,0 +1,1 @@
+/usr/bin/c++   -O3 -DNDEBUG   CMakeFiles/eigenT.dir/eigenTest.cc.o  -o eigenT  -L/usr/local/lib -rdynamic 
