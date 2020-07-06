@@ -8,7 +8,10 @@ int main(int argc, char * argv[]){
     cv::Mat frame;
     cv::VideoCapture cap;
     cv::VideoWriter wri;
-    cv::Size sWH = cv::Size(1440, 1080);
+    int width = atoi(argv[3]),
+        height = atoi(argv[4]);
+    printf("argv[3]: %d, argv[4]: %d\n", width, height);
+    cv::Size sWH = cv::Size(width, height);
 	wri.open(opath, CV_FOURCC('D', 'I', 'V', 'X'), 60.0, sWH);		
     cap.open(path);
     cap.read(frame);
