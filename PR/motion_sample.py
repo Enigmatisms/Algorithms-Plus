@@ -3,14 +3,15 @@
 #Probability Robotics
 #Chapter V Programme 5.3
 #author: sentinel
+#TODO： 聚类算法区分三次运动的分布
 
 #机器人运动模型 位姿生成以及分布采样
 
 import numpy as np
 import matplotlib.pyplot as plt
 
-vc = [0.005, 0.001, 0.002]              #机器人速度误差因子
-vw = [0.002, 0.001, 0.0005]             #机器人角速度误差因子
+vc = [0.00001, 0.00001, 0.00001]              #机器人速度误差因子
+vw = [0.009, 0.006, 0.003]             #机器人角速度误差因子
 
 ## param ut 控制量
 # x_last 上一次位姿 
@@ -62,8 +63,8 @@ if __name__ == "__main__":
     pos = []
 
     #第一遍循环 初始化 pos(全部位姿)
+    dt = 0.5 + getRandomDt()
     for j in range(sample_times):
-        dt = 0.5 + getRandomDt()
         sampled = sample_velocity(ut, start, dt)
         pos.append(sampled)
         pos_x.append(sampled[0])
@@ -75,8 +76,8 @@ if __name__ == "__main__":
     for i in range(1, iter_times):
         pos_x = []
         pos_y = []
+        dt = 0.5 + getRandomDt()
         for j in range(sample_times):
-            dt = 0.5 + getRandomDt()
             sampled = sample_velocity(ut, pos[j], dt)
             pos_x.append(sampled[0])
             pos_y.append(sampled[1])
