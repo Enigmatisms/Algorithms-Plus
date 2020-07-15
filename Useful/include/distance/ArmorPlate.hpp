@@ -82,24 +82,27 @@ private:
     ///=============================临时=================================///
 
 	/// 卷积操作
-	void convolution(const cv::Mat &src);
+	void convolution(const cv::Mat &src, bool left = true);
 
 	/// 质心求取
 	cv::Point2f momentCenter(const cv::Mat &src, const cv::Point2f &offset);
 
 	/// 由double 以及 angle 计算输出路径并按照格式输出contain中的信息到某个csv文件
-	void output();
+	void output(bool left = true);
 
     /// 提取信息的处理
 
     static bool angleCmp(const aim_deps::Armor &arm1, const aim_deps::Armor &arm2){
-        double ang1 = (arm1.left_light.box.angle + arm1.right_light.box.angle) / 2,
-        ang2 = (arm2.left_light.box.angle + arm2.right_light.box.angle) /2;
-        return (ang1 > ang2);
+        double ang1 = std::abs(arm1.left_light.box.angle - _angle) +
+                std::abs(arm1.right_light.box.angle - _angle),
+                ang2 = std::abs(arm2.left_light.box.angle - _angle) +
+            std::abs(arm2.right_light.box.angle - _angle);
+        return (ang1 < ang2);       // 比较哪个角离期望角接近
     }
-
-private:
+public:
     int center_cnt;             // 取得中心次数的计数器（大于7后不再增加）
+    static double _angle;
+private:
     double dist;				// 输出训练数据使用
 	double ang;					// 输出训练数据使用	
     cv::Point2f m_ctr;          // 中心
@@ -108,6 +111,7 @@ private:
     bool _is_enemy_blue;                                                //敌人颜色
     cv::Point2f points[4];                                              //装甲板点列的临时容器
     aim_deps::Distance_Params params;                                   //装甲板匹配参数
+
 };
 #endif     //_ARMOR_PLATE_HPP
 

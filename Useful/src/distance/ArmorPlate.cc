@@ -6,6 +6,8 @@
 
 #include "../../include/distance/ArmorPlate.hpp"
 
+double ArmorPlate::_angle = 0;
+
 ArmorPlate::ArmorPlate(double distance, double angle){
     for(int i=0; i<4 ;++i) points[i] = aim_deps::NULLPOINT2f;
     dist = distance;
@@ -371,7 +373,7 @@ cv::Point2f ArmorPlate::momentCenter(const cv::Mat &src, const cv::Point2f &offs
 	return cv::Point2f(mo.m10 / mo.m00 + offset.x, mo.m01 / mo.m00 + offset.y);
 }
 
-void ArmorPlate::convolution(const cv::Mat &src){
+void ArmorPlate::convolution(const cv::Mat &src, bool left){
 	for(int i = 1; i < src.cols - 1; ++i){
 		for(int j = 1; j < src.rows - 1; ++j){
 			contain.clear();
@@ -382,12 +384,12 @@ void ArmorPlate::convolution(const cv::Mat &src){
 					contain.push_back(src.at<cv::Vec3b>(j + y, i + x)[2]);
                 }
 			}
-			output();
+			output(left);
 		}
 	}
 }
 
-void ArmorPlate::output(){
+void ArmorPlate::output(bool left){
 	std:: string path = std::string("/home/sentinel/cvss/data.csv");
 	std::ofstream of(path.c_str(), std::ios::app);
     if(!of.is_open()){
@@ -399,7 +401,7 @@ void ArmorPlate::output(){
 	of << dist * 100 << ",";
 	of << ang << ",";
 	of << m_ctr.x << ",";
-	of << m_ctr.y << std::endl;
+    of << m_ctr.y << "," << (left ? 1.0 : 0.0) << std::endl;
 }
 
 void ArmorPlate::postProcess(std::vector<aim_deps::Armor> &tar_list){
@@ -438,6 +440,6 @@ void ArmorPlate::postProcess(std::vector<aim_deps::Armor> &tar_list){
         }
         arm.center = m_ctr;
         convolution(arm.left_light.data);
-        convolution(arm.right_light.data);
+        convolution(arm.right_light.data, false);
     }
 }
