@@ -22,9 +22,14 @@ link_directories(
 )
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR})
 aux_source_directory(src PROJ_SRC)
+aux_source_directory(src/aim_deps PROJ_DEPS)
+aux_source_directory(src/distance PROJ_DIST)
 
 # Declare the executable target built from your sources
-add_executable(Task1 src/transit.cc)
+add_executable(Task1 src/info.cc
+    ${PROJ_DEPS}
+    ${PROJ_DIST}
+)
 target_link_libraries(Task1
     MvCameraControl
     ${OpenCV_LIBS}

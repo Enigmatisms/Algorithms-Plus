@@ -67,6 +67,7 @@ void findCorners(int start, int ending){
         cv::Mat src = cv::imread(path1);
         cv::Mat src2 = cv::imread(path2);
         if(src.empty() || src2.empty()) continue;
+
         std::vector<cv::Point2f> tmp_b;
         cv::Mat dst(src.rows, src.cols, CV_8UC1);
         cv::cvtColor(src, dst, cv::COLOR_BGR2GRAY);
@@ -103,12 +104,10 @@ int main(int, char **){
     int valid_cnt = 0;
 
     ///=========================== 已经标定的摄像头参数 =============================///
-    std::vector<cv::Point3f> k1 = std::vector<cv::Point3f>{
-    	cv::Point3f(1808.70640125070,	0, 744.352105132516),
-    	cv::Point3f(0, 1812.56192444507, 516.776530407297),
-    	cv::Point3f(0, 0, 1.00)
-    };
-    cv::Mat insMb = cv::Mat(k1);
+    cv::Mat insMb = (cv::Mat_<float>(3, 3) << 
+        1776.67168581218, 0, 720,
+        0, 1778.59375346543, 540,
+        0, 0, 1);
     insMb.convertTo(insMb, CV_64F);
 
     std::vector<cv::Point3f> k2 = std::vector<cv::Point3f>{
@@ -119,8 +118,11 @@ int main(int, char **){
     cv::Mat insMt = cv::Mat(k2);
     insMt.convertTo(insMt, CV_64F);
 
-    std::vector<float> distCoeffs1=std::vector<float>{
-    	-0.4413, 0.2410, 0.0071, 0.0021
+    std::vector<double> distCoeffs1 = {
+        -0.419212525827893, 
+		0.175006995615751,
+		0.00489209817799368,
+		-0.00289049464268412
     };
 
     std::vector<float> distCoeffs2=std::vector<float>{
@@ -139,13 +141,12 @@ int main(int, char **){
         }
     }
 
-    //cv::drawChessboardCorners;
     worldPoints(world_pts, 40, x_num, y_num, valid_cnt);
     printf("Calibrating stereo-camera....\n");
     printf("Calibrating with %d sets of point data.\n", valid_cnt);
 
     cv::stereoCalibrate(world_pts, corner_b, corner_t, insMb,
-            distCoeffs1, insMt, distCoeffs2, cv::Size(1440, 1080), R, T, E, F, 256,
+            distCoeffs1, insMt, distCoeffs2, cv::Size(640, 480), R, T, E, F, 256,
             cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 200, 1e-6));
     
     printf("Process completed.\n");
@@ -161,25 +162,6 @@ int main(int, char **){
 
     printf("F matrix: \n");
     printMat(F);
-
-    //printf("Re-calculation for size(640, 480)....\n\n");
-    //cv::stereoCalibrate(world_pts, corner_b, corner_t, insMb,
-    //        distCoeffs1, insMt, distCoeffs2, cv::Size(640, 480), R, T, E, F, 256,
-    //        cv::TermCriteria(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 100, 1e-5));
-    //
-    //printf("Process completed.\n");
-    //
-    //printf("R matrix: \n");
-    //printMat(R);
-    //
-    //printf("T matrix: \n");
-    //printMat(T);
-    //
-    //printf("E matrix: \n");
-    //printMat(E);
-    //
-    //printf("F matrix: \n");
-    //printMat(F);
 
     return 0;
 }
