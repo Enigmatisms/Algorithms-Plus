@@ -24,6 +24,15 @@ done
 
 addList=$(echo `python gitProcess.py $pyarg1 $pyarg2`)
 array=(${addList//,/})
+
+# echo -e "{\c" &> "gitFileList.txt"
+# if [ ! $step_cnt -eq $file_cnt ]; then
+## 不换行输出
+    # echo -e "\"$name\": $mod, \c" >> "gitFileList.txt"
+# else
+    # echo -e "\"$name\": $mod}\c" >> "gitFileList.txt"
+# fi
+
 for var in ${array[@]}; do
     git add $var
 done
@@ -32,10 +41,3 @@ git commit -m "$1"
 
 git push origin master
 
-echo -e "{\c" &> "gitFileList.txt"
-if [ ! $step_cnt -eq $file_cnt ]; then
-# 不换行输出
-    echo -e "\"$name\": $mod, \c" >> "gitFileList.txt"
-else
-    echo -e "\"$name\": $mod}\c" >> "gitFileList.txt"
-fi
