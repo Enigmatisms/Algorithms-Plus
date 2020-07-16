@@ -1,4 +1,5 @@
 #!/bin/bash
+
 for files in *
 do
     let file_cnt+=1
@@ -7,7 +8,7 @@ done
 step_cnt=0
 pyarg1=""
 pyarg2=""
-for i in `ls`; do
+for i in `ls -a`; do
     name=`stat -c %n $i`
     mod=`stat -c %Y $i`
     

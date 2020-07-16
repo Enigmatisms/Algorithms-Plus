@@ -1,0 +1,5 @@
+/.vscode/
+*.db
+*.avi
+*.mp4
+/build/
