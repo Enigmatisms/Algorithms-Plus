@@ -22,3 +22,8 @@ target_link_libraries(Task2
     ${CERES_LIBRARIES}
     ${OpenCV_LIBS}
 )
+
+add_executable(Task3 ceres_test.cpp)
+target_link_libraries(Task3
+    ${CERES_LIBRARIES}
+)

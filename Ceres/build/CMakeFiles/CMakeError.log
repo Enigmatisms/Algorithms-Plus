@@ -1,0 +1,55 @@
+Determining if the pthread_create exist failed with the following output:
+Change Dir: /home/sentinel/Algorithms-Plus/Ceres/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_9bdd9/fast"
+/usr/bin/make -f CMakeFiles/cmTC_9bdd9.dir/build.make CMakeFiles/cmTC_9bdd9.dir/build
+make[1]: Entering directory '/home/sentinel/Algorithms-Plus/Ceres/build/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_9bdd9.dir/CheckSymbolExists.cxx.o
+/usr/bin/c++     -std=c++11 -Wall    -o CMakeFiles/cmTC_9bdd9.dir/CheckSymbolExists.cxx.o -c /home/sentinel/Algorithms-Plus/Ceres/build/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx
+Linking CXX executable cmTC_9bdd9
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_9bdd9.dir/link.txt --verbose=1
+/usr/bin/c++   -std=c++11 -Wall     CMakeFiles/cmTC_9bdd9.dir/CheckSymbolExists.cxx.o  -o cmTC_9bdd9 -rdynamic 
+CMakeFiles/cmTC_9bdd9.dir/CheckSymbolExists.cxx.o：在函数‘main’中：
+CheckSymbolExists.cxx:(.text+0x16)：对‘pthread_create’未定义的引用
+collect2: error: ld returned 1 exit status
+CMakeFiles/cmTC_9bdd9.dir/build.make:97: recipe for target 'cmTC_9bdd9' failed
+make[1]: *** [cmTC_9bdd9] Error 1
+make[1]: Leaving directory '/home/sentinel/Algorithms-Plus/Ceres/build/CMakeFiles/CMakeTmp'
+Makefile:126: recipe for target 'cmTC_9bdd9/fast' failed
+make: *** [cmTC_9bdd9/fast] Error 2
+
+File /home/sentinel/Algorithms-Plus/Ceres/build/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx:
+/* */
+#include <pthread.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef pthread_create
+  return ((int*)(&pthread_create))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the function pthread_create exists in the pthreads failed with the following output:
+Change Dir: /home/sentinel/Algorithms-Plus/Ceres/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_2fc26/fast"
+/usr/bin/make -f CMakeFiles/cmTC_2fc26.dir/build.make CMakeFiles/cmTC_2fc26.dir/build
+make[1]: Entering directory '/home/sentinel/Algorithms-Plus/Ceres/build/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_2fc26.dir/CheckFunctionExists.cxx.o
+/usr/bin/c++     -std=c++11 -Wall -DCHECK_FUNCTION_EXISTS=pthread_create   -o CMakeFiles/cmTC_2fc26.dir/CheckFunctionExists.cxx.o -c /home/sentinel/Algorithms-Plus/Ceres/build/CMakeFiles/CheckLibraryExists/CheckFunctionExists.cxx
+Linking CXX executable cmTC_2fc26
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_2fc26.dir/link.txt --verbose=1
+/usr/bin/c++   -std=c++11 -Wall -DCHECK_FUNCTION_EXISTS=pthread_create    CMakeFiles/cmTC_2fc26.dir/CheckFunctionExists.cxx.o  -o cmTC_2fc26 -rdynamic -lpthreads 
+/usr/bin/ld: 找不到 -lpthreads
+collect2: error: ld returned 1 exit status
+CMakeFiles/cmTC_2fc26.dir/build.make:97: recipe for target 'cmTC_2fc26' failed
+make[1]: *** [cmTC_2fc26] Error 1
+make[1]: Leaving directory '/home/sentinel/Algorithms-Plus/Ceres/build/CMakeFiles/CMakeTmp'
+Makefile:126: recipe for target 'cmTC_2fc26/fast' failed
+make: *** [cmTC_2fc26/fast] Error 2
+
+

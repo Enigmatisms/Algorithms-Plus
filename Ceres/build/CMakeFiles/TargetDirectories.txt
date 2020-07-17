@@ -1,0 +1,5 @@
+/home/sentinel/Algorithms-Plus/Ceres/build/CMakeFiles/Task1.dir
+/home/sentinel/Algorithms-Plus/Ceres/build/CMakeFiles/edit_cache.dir
+/home/sentinel/Algorithms-Plus/Ceres/build/CMakeFiles/Task2.dir
+/home/sentinel/Algorithms-Plus/Ceres/build/CMakeFiles/Task3.dir
+/home/sentinel/Algorithms-Plus/Ceres/build/CMakeFiles/rebuild_cache.dir
