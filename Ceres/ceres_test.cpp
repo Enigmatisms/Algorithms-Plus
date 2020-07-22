@@ -8,16 +8,17 @@ struct CostFunc
 {
     template <typename T>
     bool operator()(const T* const x, T* residual) const {
-        residual[0] = T(-6.81255495e-13) * pow(x[0], 4) + T(2.23967582e-09) * pow(x[0], 3) +
-            T(-2.61811669e-06) * pow(x[0], 2) + T(1.26270659e-03) * x[0] + 
-            T(-2.02581731e-01) + (T(-0.000010) * x[0] * x[0] + T(-0.711466)) / 
+        residual[0] = T(2.61915134e-13) * pow(x[0], 5) + T(-9.74186967e-10) * pow(x[0], 4) +
+            T(1.40707957e-06) * pow(x[0], 3) + T(-9.79470420e-04) * x[0] * x[0] + 
+            T(3.25042702e-01) * x[0] + T(-4.03976079e+01) +
+                (T(-0.000010) * x[0] * x[0] + T(-0.711466)) / 
                 pow((T(0.000010) * x[0] * x[0] - T(0.711466)), 2) / T(1382.085566405469);
         return true;
     }
 };
 
 int main(int argc, char* argv[]) {
-    double initial_x = 780;
+    double initial_x = 560;
     double x = initial_x;
 
     Problem problem;
