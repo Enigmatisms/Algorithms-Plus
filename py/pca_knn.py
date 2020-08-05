@@ -6,19 +6,22 @@ import matplotlib.pyplot as plt
 import matplotlib.image as img
 from sklearn.neighbors import KNeighborsClassifier      # KNN分类器
 from sklearn.externals import joblib                    # 模型保存以及加载
+from sklearn.decomposition import PCA
 
 
 class PCAKNN:
     train_path = "/home/sentinel/trainPics"
     test_path = "/home/sentinel/testPics"
-    def __init__(self):
+    def __init__(self, dim = 15):
         self.classifier = KNeighborsClassifier(9, 'uniform')
+        self.pca = PCA(n_components = dim)
 
     # 去中心化
     def deCentralized(self, data:np.array):
-        rows = data.shape[0]
+        rows = data.shape[1]
+        # means = np.array([np.mean(data[i, :]) for i in range(rows)])
         for i in range(rows):
-            data[i, :] -= np.mean(data[i, :])
+            data[:, i] -= np.mean(data[:, i])
             
 
     # 降维处理，将img降维到dim
@@ -36,6 +39,12 @@ class PCAKNN:
         sample = img.dot(eig_mat)
         # reshape为行向量
         # 将一个dim * dim 的矩阵reshape成一个行向量
+        return sample.reshape(sample.size)
+
+        # 降维处理，将img降维到dim
+    def standardPCA(self, img:np.array):
+        img = img.astype(float)
+        sample = self.pca.fit_transform(img)
         return sample.reshape(sample.size)
 
     # 通过数据以及初始的分类进行训练
@@ -56,13 +65,12 @@ class PCAKNN:
         print("Model saved to: ", path)
 
 if __name__ == "__main__":
-    model = PCAKNN()
+    dim = 20
+    model = PCAKNN(dim)
 
     train_path = "/home/sentinel"
 
     train = 0
-
-    dim = 10
     
     if train:
         cnt = []
@@ -71,6 +79,7 @@ if __name__ == "__main__":
         for i in range(1, 10):
             for j in range(1, 68):
                 data = img.imread(train_path + "/trainPics/" + str(i) + "/num" + str(j) + ".png")
+                # data_set.append(model.standardPCA(data))
                 data_set.append(model.pcaProcess(data, dim))
                 cnt.append(i)
 
@@ -89,9 +98,9 @@ if __name__ == "__main__":
         for i in range(1, 10):
             for j in range(1, 9):
                 data = img.imread(train_path + "/testPics/" + str(i) + "/num" + str(j) + ".png")
+                # test_data.append(model.standardPCA(data))
                 test_data.append(model.pcaProcess(data, dim))
                 test_labels.append(i)
-
 
         pred = model.predict(np.array(test_data))
         print(test_labels)

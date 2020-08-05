@@ -2,4 +2,5 @@
 *.db
 *.avi
 *.mp4
+*.pkl
 /build/
