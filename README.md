@@ -52,6 +52,6 @@
 >> * PCA KNN 用sklearn做出来了，但是自己写的PCA出错了
 >> * 个人认为问题在于： 对去中心化的过程理解不是很透彻，到底如何减去均值，为什么要这样减，什么是feature没有很好的理解
 - [ ] 写一个shell语法总结性的文件
-- [ ] sklearn 学一下
-- [ ] sklearn PCA 数字识别
-- [ ] sklearn KNN 原理，自己的实现以及PCA KNN组合的机器学习
+- [x] sklearn 学一下
+- [x] sklearn PCA 数字识别
+- [x] sklearn KNN 原理，自己的实现以及PCA KNN组合的机器学习

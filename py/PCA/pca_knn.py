@@ -25,19 +25,18 @@ class PCAKNN:
             
 
     # 降维处理，将img降维到dim
+    # 图像PCA不需要均值化，就是个简单的SVD压缩
     def pcaProcess(self, img:np.array, dim = 15):
         img = img.astype(float)
-        # 去中心化
-        self.deCentralized(img)
-        # 求协方差
-        cov = np.transpose(img).dot(img)
-        # svd协方差
-        u, s, vt = np.linalg.svd(cov)
+        u, s, vt = np.linalg.svd(img)
         # 取前dim 维的特征向量(比如(72, 68)-> (68, 68)的cov， 对应特征矩阵为(68, dim)的shape)
-        eig_mat = vt[:, :dim]
-        # X.dot(特征向量)
-        sample = img.dot(eig_mat)
-        # reshape为行向量
+
+        # 此处的sample操作是图像绘制时使用的，没有达到实际的压缩保存效果
+        # sample = u[:, :dim].dot(np.diag(s[:dim])).dot(vt[:dim, :])
+
+        # 此操作才是真正进行压缩(PCA)
+        sample = u[:, :dim].dot(np.diag(s[:dim]))
+
         # 将一个dim * dim 的矩阵reshape成一个行向量
         return sample.reshape(sample.size)
 
@@ -65,7 +64,7 @@ class PCAKNN:
         print("Model saved to: ", path)
 
 if __name__ == "__main__":
-    dim = 20
+    dim = 5
     model = PCAKNN(dim)
 
     train_path = "/home/sentinel"
