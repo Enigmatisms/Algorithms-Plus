@@ -1,3 +1,0 @@
-/home/sentinel/Algorithms-Plus/CUDA/build/CMakeFiles/rebuild_cache.dir
-/home/sentinel/Algorithms-Plus/CUDA/build/CMakeFiles/edit_cache.dir
-/home/sentinel/Algorithms-Plus/CUDA/build/CMakeFiles/Task.dir
