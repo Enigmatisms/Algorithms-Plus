@@ -1,0 +1,1 @@
+/usr/bin/c++ -rdynamic CMakeFiles/Task.dir/Task_generated_testCuda.cu.o -o Task  /usr/local/cuda-10.1/lib64/libcudart_static.a -ldl -lrt -lpthread 
