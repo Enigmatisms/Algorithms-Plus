@@ -31,12 +31,13 @@ def naiveBackPack(weights, values, capc, item):
             )
 
 # non recursive
+# This is still not so clear to you
+## You need to do more about this !
 def backPack(weights, values, capc, N):
-    min_wt = min(weights)
     total = np.zeros((N, capc + 1))        # assume K is set
     
     for i in range(N):
-        for wt in range(0, capc + 1):          # wt is the backpack current maximum weight
+        for wt in range(min(weights), capc + 1):          # wt is the backpack current maximum weight
             if weights[i] <= wt:
                 if i == 0 or wt == 0:
                     total[0][wt] = values[i]
