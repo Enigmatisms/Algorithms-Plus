@@ -101,8 +101,20 @@
 * 2020.8.15
     * 摩擦轮速度与裁判系统测速的一维Kalman in C
     * 双向链表实现的中值滤波 in C
+* 2020.8.22
+    * 动态规划初识：完成了三个背包问题，思路逐渐清晰
 ---
 ### CUDA GPU Programming
 * 2020.8.19
     * CUDA: the first GPU program.
+---
+### 其他学习
+* 2020.8.19
+    * 第一篇论文：Stixel world GPU加速理论，读完并能顺利跑GitHub代码
+    * 关于本篇论文的有关总结写在: `Paper & Summary / Paper / GPU-stixel-paper.md`
+* 2020.8.20
+    * 立体视觉入门PPT
+    * 总结写在 `Paper & Summary / Stereo Vision Intros.md`
+* 2020.8.21 - 22
+    * MRF 以及概率论相关知识的补充
 
