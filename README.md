@@ -117,4 +117,7 @@
     * 总结写在 `Paper & Summary / Stereo Vision Intros.md`
 * 2020.8.21 - 22
     * MRF 以及概率论相关知识的补充
+* 2020.8.23
+    * 第二篇论文：`基于置信传播的双目匹配算法` 完成
+    * 总结在 `Paper & Summary / Paper / Stereo Matching paper.md`
 
