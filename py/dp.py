@@ -96,7 +96,7 @@ def optBackPack(weights, values, capc, N):
                     total[wt],                          
                     total[wt - weights[i]] + values[i]
                 )
-    # print(total)
+    print(total)
     return float(total[capc])
 ## 以上说明了动态规划问题（有空间优化时）的两个特征
 ## 1. max保证了 本次的value和不会比之前的结果差 (对任意一种分配方式)
@@ -182,7 +182,7 @@ def optBndBackPack(weights, values, Ns, capc):
 if __name__ == "__main__":
     capc = 12
     N = 4
-    wts = np.array([3, 4, 5, 3])
+    wts = np.array([3, 4, 6, 4])
     Ns = np.array([1, 2, 1, 4])
     vals = [4, 5, 6, 5]
     print("Naive:", naiveBackPack(wts, vals, capc, N))
