@@ -14,8 +14,7 @@
 - P(D, L, O | I) = P(I | D, L, O) * P(D, L, O) / P(I) 公式解释
   - 左边：在给定观测图像I的情况下，视差/深度不连续/遮挡 的可能情况
   - 相当于给定观测图像，有关深度划分的这些信息（D, L, O）的分布给出（后验）
-  - P(I | D, L, O) 一个似然：
-    - 给定D, L, O，一个观测图像I符合给定的三个特征的似然
+  - P(I | D, L, O) 一个似然：    - 给定D, L, O，一个观测图像I符合给定的三个特征的似然
     - 使用exp(-F(s, ds, I))来建模 （对所有不属于遮挡点的像素s求连乘）
     - F为图像匹配的cost函数，与像素的匹配差值有关
     - 注意P(I | D, O, L) = P(I | D, O)
@@ -116,8 +115,8 @@
     - 就是因为人脑中有许多其他的信息，比如所看到的物体---（判断物体的性质，估计物体的形态）
     - 人脑可以综合视觉信息，对所有的物体 / 脑中的先验知识 进行融合，得到一个较为准确的估计
 #### TODO
-- [ ] Conditional Random Field (CRF)
+- [x] Conditional Random Field (CRF)
+- [x] Belief Propagation
 - [ ] Hidden Markov Model (HMM)
-- [ ] Belief Propagation
 - [ ] Boltzman Distribution
 - [ ] Mean Shift
