@@ -117,6 +117,8 @@
 ### CUDA GPU Programming
 * 2020.8.19
     * CUDA: the first GPU program.
+* 2020.8.27
+    * CUDA 基础
 ---
 ### 其他学习
 * 2020.8.19
