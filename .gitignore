@@ -4,3 +4,4 @@
 *.mp4
 *.pkl
 /build/
+! *.json
