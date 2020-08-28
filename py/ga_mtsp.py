@@ -1,11 +1,13 @@
 #!/usr/bin/env pyhon3
 #-*-coding:utf-8-*-
 # 使用遗传算法对 多旅行商 MTSP 进行求解
+# 最后的结果使用了H圈优化理论中的交换法
 
 import xlrd
 import numpy as np
 import random as rd
 import matplotlib.pyplot as plt
+from copy import deepcopy as dcp
 from collections import deque
 
 inf = 10e5
@@ -50,15 +52,27 @@ class Genetic:
         self.maxi = 0
         self.generatePopulation()
         self.iter_costs = []
-        self.now_iter = 0
+
+        self.total_costs = np.zeros((self.max_iter + 1))
+        self.number_of_cluster = 0
+
+    def reset(self):
+        self.cost_sum = 0
+        self.costs = np.array([])
+        self.population.clear()
+        self.generatePopulation()
+        
+        self.number_of_cluster += 1
+        self.total_costs += np.array(self.iter_costs)
+        self.iter_costs.clear()
     
     def adjSetup(self):
         wb = xlrd.open_workbook(".\\pos2.xlsx")
         st = wb.sheets()[0]
         raw_x = st.col(1)
         raw_y = st.col(2)
-        self.xs = [x.value for x in raw_x[1:]]
-        self.ys = [y.value for y in raw_y[1:]]
+        self.xs = np.array([x.value for x in raw_x[1:]])
+        self.ys = np.array([y.value for y in raw_y[1:]])
         self.adjs = np.zeros((self.chrome_len, self.chrome_len))
         for i in range(self.city):
             for j in range(self.city):
@@ -72,7 +86,8 @@ class Genetic:
         for i in range(-1, - self.m, -1):
             self.adjs[:self.city, i] = self.adjs[:self.city, 0]
             self.adjs[i, :self.city] = self.adjs[0, :self.city]
-        self.adjs[-self.m + 1:, -self.m + 1:] = inf     # 互相不可到达
+        if self.m > 1:
+            self.adjs[-self.m + 1:, -self.m + 1:] = inf     # 互相不可到达
 
     # 生成随机的初始种群 self.pop 个
     def generatePopulation(self):
@@ -245,36 +260,92 @@ class Genetic:
         inds = sorted(list(zip(self.costs, self.population)))
         return inds[0]
 
-    def draw(self, result):
-        for i in range(len(result)):    # 替换
-            if result[i] < 0: result[i] = 0
-        result.append(0)
-        color_index = -1
-        for i in range(len(result) - 1):
-            if result[i] == 0:
-                color_index += 1
-            plt.plot(
-                [self.xs[result[i]], self.xs[result[i + 1]]], 
-                [self.ys[result[i]], self.ys[result[i + 1]]],
-                color = colors[color_index],
-                linestyle = linestyles[color_index]
-            )
+    # 交换法：对已经得到的四个圈进行最优化
+    def exchange(self, arr:list):
+        length = len(arr)
+        result = dcp(arr)
+        for i in range(length):
+            for j in range(i + 2, length + 2):
+                # 需要交换的情形
+                x1 = result[i]
+                x2 = result[(i + 1) % length]
+                y1 = result[j % length]
+                y2 = result[(j + 1) % length]
+                if self.adjs[x1][x2] + self.adjs[y1][y2] > self.adjs[x1][y1] + self.adjs[x2][y2]:
+                    result[(i + 1) % length], result[j % length] = result[j % length], result[(i + 1) % length]
+                    result[(i + 2) % length:j % length] = result[(j - 1) % length : (i + 1) % length: -1]
+        # 成环操作
+        if result[-1] == 0:     
+            result.append(result[0])
+        else:
+            result.append(0)
+        return result
+
+    # 优化--交换法对结果进行优化
+    def optimization(self, results):
+        zeros = [0]
+        paths = []
+        for i in range(1, self.chrome_len):
+            if results[i] < 0:
+                results[i] = 0
+                zeros.append(i)
+        zeros.append(None)
+        for i in range(self.m):
+            path = self.exchange(results[zeros[i] : zeros[i + 1]])
+            paths.append(path)
+        return paths
         
-        plt.scatter(self.xs, self.ys)
+    def draw(self, paths):
+        for i in range(len(paths)):
+            dist = 0
+            path_len = len(paths[i])
+            for j in range(path_len):
+                x1 = paths[i][j]
+                x2 = paths[i][(j + 1) % path_len]
+                dist += self.adjs[x1][x2]
+            print("路径(%d) 长度为： %f"%(i, dist))
+            plt.plot(
+                self.xs[paths[i]], 
+                self.ys[paths[i]],
+                color = colors[i],
+                linestyle = linestyles[i],
+                label = "路径 %d"%(i)
+            )
+            
+        plt.scatter(self.xs, self.ys, label = "传感器位置")
+        plt.xlabel("经度（转为距离）/KM")
+        plt.ylabel("纬度（转为距离）/KM")
+        plt.title("%d车遗传算法优化模型"%(self.m))
+        plt.legend()
 
         plt.figure(2)
+        self.total_costs /= self.number_of_cluster
         xs = np.arange(self.max_iter + 1)
-        plt.plot(xs, self.iter_costs)
+        plt.plot(xs, self.total_costs, color = "black")
+        plt.grid()
+        plt.xlabel("代数/代")
+        plt.ylabel("劣质基因表达分数（越低越优）")
+        plt.title("遗传算法收敛情况")
+        plt.legend()
+
         plt.show()
 
 if __name__  == "__main__":
+    plt.rcParams['font.sans-serif'] = ['SimHei'] # 指定默认字体
+    plt.rcParams['axes.unicode_minus'] = False
+    plt.rcParams['font.size'] = 16
     results = []
-    for i in range(6):
-        ga = Genetic(30, p_mut = 0.02, p_crs = 2/3, max_iter = 500, pop = 100)
+    # 对6个不同种群，每个种群的大小为 pop, 迭代 max_iter 代 取6个种群的最优
+    ga = Genetic(30, p_mut = 0.02, p_crs = 2/3, max_iter = 600, pop = 100, m = 4)
+    for i in range(5):
         results.append(ga.iteration())
-    results = sorted(results)
-    print(results)
-    ga.draw(results[0][1])
+        ga.reset()
+    results = min(results)
+
+    # 进行图优化
+    paths = ga.optimization(results[1])
+    print(len(paths))
+    ga.draw(paths)
 
 
         
