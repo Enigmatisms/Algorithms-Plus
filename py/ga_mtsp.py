@@ -1,4 +1,4 @@
-#!/usr/bin/env pyhon3
+#!/usr/bin/env python3
 #-*-coding:utf-8-*-
 # 使用遗传算法对 多旅行商 MTSP 进行求解
 # 最后的结果使用了H圈优化理论中的交换法
@@ -79,7 +79,6 @@ class Genetic:
                 if i == j:
                     self.adjs[i][i] = inf
                 else:
-                    # 由于纬度和经度的关系，纬度单位1能表示经度单位2的距离
                     self.adjs[i][j] = self.adjs[j][i] = (
                         np.sqrt((self.xs[i] - self.xs[j]) ** 2 + (self.ys[i] - self.ys[j]) ** 2)
                     )
@@ -132,7 +131,7 @@ class Genetic:
         temp = sorted(temp)
         return [x[1] for x in temp[:num]]
 
-    # 精英选择 + 轮盘赌
+    # 精英选择
     def select(self):
         # 随机产生新个体，剩余的self.pop * self.p_crs 个个体由交叉产生
         temp = int(self.p_crs * self.pop)
@@ -261,11 +260,22 @@ class Genetic:
         return inds[0]
 
     # 交换法：对已经得到的四个圈进行最优化
-    def exchange(self, arr:list):
+    def optimize(self, arr:list):
         length = len(arr)
         result = dcp(arr)
-        for i in range(length):
-            for j in range(i + 2, length + 2):
+        self.exchange(result)
+        temp = deque(result)
+        temp.rotate(int(self.city / 2))
+        result = list(temp)
+        self.exchange(result)
+        # 成环操作
+        result.append(result[0])
+        return result
+
+    def exchange(self, result):
+        length = len(result)
+        for i in range(length - 3):
+            for j in range(i + 2, length - 1):
                 # 需要交换的情形
                 x1 = result[i]
                 x2 = result[(i + 1) % length]
@@ -274,12 +284,6 @@ class Genetic:
                 if self.adjs[x1][x2] + self.adjs[y1][y2] > self.adjs[x1][y1] + self.adjs[x2][y2]:
                     result[(i + 1) % length], result[j % length] = result[j % length], result[(i + 1) % length]
                     result[(i + 2) % length:j % length] = result[(j - 1) % length : (i + 1) % length: -1]
-        # 成环操作
-        if result[-1] == 0:     
-            result.append(result[0])
-        else:
-            result.append(0)
-        return result
 
     # 优化--交换法对结果进行优化
     def optimization(self, results):
@@ -291,7 +295,7 @@ class Genetic:
                 zeros.append(i)
         zeros.append(None)
         for i in range(self.m):
-            path = self.exchange(results[zeros[i] : zeros[i + 1]])
+            path = self.optimize(results[zeros[i] : zeros[i + 1]])
             paths.append(path)
         return paths
         

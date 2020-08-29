@@ -3,12 +3,12 @@
 ---
 ### TODOS
 - [ ] 写一个shell语法总结性的文件
-- [x] sklearn 学一下
+- [x] sklearn 学一x下
 - [x] sklearn PCA 数字识别
 - [x] sklearn KNN 原理，自己的实现以及PCA KNN组合的机器学习
 
 #### 数据处理 & 机器学习
-- [ ] SVM learn / practice / application
+- [x] SVM learn / practice / application
 - [ ] LDA: 暂无详细计划
 
 #### 概率机器人
@@ -16,9 +16,9 @@
 - [ ] 粒子滤波实现
 
 #### 其他有意思的算法
-- [ ] 蚁群算法(TSP问题分析)
+- [x] 蚁群算法(TSP问题分析)
 - [ ] 退火算法(需要寻找实例)
-- [ ] 遗传算法(需要寻找实例)
+- [x] 遗传算法(需要寻找实例)
 
 #### 数据结构与算法复习
 - [ ] 栈的STL库使用
@@ -28,7 +28,6 @@
  
 #### Recent
 - [ ] CUDA Programming learning
-- [ ] Buy a book related to CUDA GPU programming.
 
 ---
 ### 算法实现练习
@@ -113,6 +112,9 @@
     * 这个实现与匈牙利算法本身的说明（参见《离散数学》）非常不一样，书上说的方法很简单易懂，实现起来很难
     * 上午将DP算法的强化做完了，`py/DP/dp3.py`的算法存在很大漏洞，在`py/DP/dp4.py`中进行了阐述
     * 结合论文再看了一遍论文中的DP以及LUT生成
+* 2020.8.28 / 29
+    * 完成了遗传算法-MTSP问题
+    * 完成了蚁群算法-TSP问题
 ---
 ### CUDA GPU Programming
 * 2020.8.19
