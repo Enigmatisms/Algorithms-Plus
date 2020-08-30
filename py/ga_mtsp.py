@@ -307,7 +307,7 @@ class Genetic:
                 x1 = paths[i][j]
                 x2 = paths[i][(j + 1) % path_len]
                 dist += self.adjs[x1][x2]
-            print("路径(%d) 长度为： %f"%(i, dist))
+            print("路径(%d) 长度为： %f"%(i, dist), paths[i])
             plt.plot(
                 self.xs[paths[i]], 
                 self.ys[paths[i]],
@@ -317,6 +317,8 @@ class Genetic:
             )
             
         plt.scatter(self.xs, self.ys, label = "传感器位置")
+        for i in range(len(self.xs)):
+            plt.annotate(i, xy = (self.xs[i], self.ys[i]), xytext = (self.xs[i] + 0.01, self.ys[i] + 0.01))
         plt.xlabel("经度（转为距离）/KM")
         plt.ylabel("纬度（转为距离）/KM")
         plt.title("%d车遗传算法优化模型"%(self.m))
