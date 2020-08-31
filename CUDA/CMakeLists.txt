@@ -1,6 +1,12 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(Task)
-find_package( CUDA REQUIRED )
+set(CMAKE_BUILD_TYPE "release")
+
+find_package(CUDA REQUIRED)
+find_package(OpenCV REQUIRED)
+if(NOT OpenCV_FOUND)
+    message("No appropriate opencv package found.")
+endif()
 
 set(
     CUDA_NVCC_FLAGS
@@ -12,9 +18,22 @@ set(
     -gencode=arch=compute_52,code=sm_52
     -gencode=arch=compute_61,code=sm_61
     -gencode=arch=compute_70,code=sm_70
-    )
+)
 
-cuda_add_executable(
-    Task
-    testCuda.cu
+include_directories(
+    ./include
+    /usr/local/include
+    ${OpenCV_INCLUDE_DIRS}
+)
+
+link_directories(
+    /usr/local/lib
+)
+
+cuda_add_executable(Task
+    Integral.cu
+)
+
+target_link_libraries(Task
+    ${OpenCV_LIBS}
 )
