@@ -3,6 +3,14 @@
 #include <iostream>
 
 // 输出CUDA内置的相关信息
+// Device name: GeForce MX150
+// Kernel version: code_61
+// Total Global Mem: 2099904512
+// Shared Mem per block: 49152
+// Warp size: 32
+// Max thread per block: 1024
+// Max thread dim: 1024, 1024, 64
+// Max Grid size: 2147483647, 65535, 65535
 
 
 int main(){
