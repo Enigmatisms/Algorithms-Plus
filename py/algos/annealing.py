@@ -2,8 +2,14 @@
 #-*-coding:utf-8-*-
 #模拟退火算法
 
+import xlrd
 import numpy as np
 import matplotlib.pyplot as plt
+from functools import partial
+from copy import deepcopy as dcp
+import torch
+
+inf = 10e5
 
 class Anneal:
     """
@@ -31,9 +37,10 @@ class Anneal:
         self.idle_cnt = 0
         self.search_range = search_range
         self.init_temp = init_temp
-        self.cost_func = func
         self.state = state
-        self.state_cost = func(state)
+        self.cost_func = func
+        print(func)
+        self.state_cost = func(self.state)
 
         self.cost_track = []
         self.state_track = []
@@ -54,7 +61,10 @@ class Anneal:
     def anneal(self):
         for i in range(self.max_iter):
             temp = self.init_temp / (1 + i)
-            new_state = self.update()
+            if self.naive:
+                new_state = self.update()
+            else:       # 需要根据self.state来生成新的解
+                new_state = self.update(self.state)
             cost = self.cost_func(new_state)
             diff = cost - self.state_cost
             if diff < 0:        # 新解的代价小 直接接受
@@ -71,7 +81,10 @@ class Anneal:
                     if self.idle_cnt > self.max_idle:
                         print("Converge before max_iter. Maximum idle counter reached.")
                         break
-            self.state_track.append(self.state)
+            if self.naive:
+                self.state_track.append(self.state)
+            else:
+                self.state_track.append(i)
             self.cost_track.append(self.state_cost)
         return self.state, self.state_cost
 
@@ -84,22 +97,77 @@ class Anneal:
         # 用作绘图 state_track即是横坐标，cost_track为纵坐标
         return self.state_track, self.cost_track
 
+    ## 对最后的结果进行优化
+    ## 求最值问题最后使用梯度下降求精确值
+    ## TSP问题用交换法优化
+    ## 要是有pytorch 就能实现自动求导了
+    ## SD法 步长难以确定 牛顿法不一定稳定（看一阶还是二阶）
+    ## 求极值只需要数值解，所以pytorch的自动微分倒是挺有用的
+    def postOptimization(self, grad):
+        pass
+    # 先不实现
+
 def func_to_solve1(x):
     return 0.6 * x**2 - 2 * np.cos(4 * x)
 
 def func_to_solve2(x):
     return 6 * np.sin(4*x) / (x**2 + 1)
 
+def tsp_cost(adjs, path):
+    cost = 0
+    for i in range(len(path) - 1):
+        cost += adjs[path[i]][path[i + 1]]
+    cost += adjs[path[-1]][0]
+    return cost
+
+# 对path某一段长度进行random shuffle
+def tsp_update(search_range, path:np.array):
+    _path = dcp(path)
+    length = np.random.randint(int(search_range / 2), search_range + 1)
+    pos = np.random.randint(1, len(path) - length)
+    np.random.shuffle(_path[pos:pos + length + 1])
+    return _path
+
+# 获取TSP问题的地图
+def getMap():
+    wb = xlrd.open_workbook("..\\pos2.xlsx")
+    st = wb.sheets()[0]
+    raw_x = st.col(1)
+    raw_y = st.col(2)
+    xs = np.array([x.value for x in raw_x[1:]])
+    ys = np.array([y.value for y in raw_y[1:]])
+    cities = len(xs)
+    adjs = np.zeros((cities, cities))
+    for i in range(cities):
+        for j in range(cities):
+            if i == j:
+                adjs[i][i] = inf
+            else:
+                adjs[i][j] = adjs[j][i] = (
+                    np.sqrt((xs[i] - xs[j]) ** 2 + (ys[i] - ys[j]) ** 2)
+                )
+    return cities, xs, ys, adjs
+
+def draw(xs, ys, path):
+    plt.scatter(xs, ys, label = "cities", c = "black")
+    plt.plot(xs[path], ys[path], label = "path", color = "black")
+
 if __name__ == "__main__":
     xs = np.linspace(-3, 3, 50)
     ys1 = func_to_solve1(xs)
     ys2 = func_to_solve2(xs)
 
-    
+    cities, path_xs, path_ys, adjs = getMap()      # TSP问题
+
     bound = (-3, 3)
     an1 = Anneal(func_to_solve1, bound, -2.9)
     an2 = Anneal(func_to_solve2, bound, -2.9)
     an3 = Anneal(func_to_solve2, bound, 2.9)
+
+    # 求解TSP问题
+    tsp_init = np.arange(0, cities)
+    np.random.shuffle(tsp_init[1:])
+    an4 = Anneal(partial(tsp_cost, adjs), partial(tsp_update, int(cities / 2)), tsp_init, max_iter = 80000, init_temp = 40000)
 
     print("Annealing result for func1:", an1.anneal())
     print("Annealing result for func2 with init -2:", an2.anneal())
@@ -114,5 +182,15 @@ if __name__ == "__main__":
     plt.scatter(*an2.getStateCost(), label = "init at -2.9", c = "blue")
     plt.scatter(*an3.getStateCost(), label = "init at 2.9", c = "green")
     plt.legend()
+
+    path, path_cost = an4.anneal()
+    path = np.concatenate((path, [0]))
+    plt.figure(3)
+    draw(path_xs, path_ys, path)
+    plt.legend()
+
+    plt.figure(4)
+    plt.plot(*an4.getStateCost())
+    plt.title("Cost iteration for TSP annealing.")
 
     plt.show()

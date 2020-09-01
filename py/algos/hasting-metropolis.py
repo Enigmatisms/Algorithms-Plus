@@ -38,6 +38,9 @@ class MH:
             由于最后我们接受的样本就是依靠选取的参数随机得到的
             sigma小的时候，最后的结果会按照对应形状进行分布，但是其方差也会变小，sigma大的时候同理
             也就是说，我们的采样结果和建议分布生成的随机数关系十分密切，通常，建议分布也是需要进行良好设计的
+        11. ***第77行***，注释掉了建议分布，认为q(i|j)/q(j|i) = 1 也可以进行MH采样，为什么？
+            大概是这样的：由于对称，我们的独立取样实际上有：从i到j状态 与 从 j到i状态是两个独立的事件
+            由于是对称简单随机抽样，i到j，j到i的概率必然是一样的，那么就为1
     """
     def __init__(self, init_iter = 1000, sg = "guass"):
         self.state = 0.5
@@ -73,8 +76,8 @@ class MH:
                 samp = self.suggest()
                 try:
                     # 不进行hasting 优化的称作MCMC采样（朴素的）
-                    alpha = min(1, func(samp) / func(self.state) * 
-                        self.pdf(self.state) / self.pdf(samp))      
+                    alpha = min(1, func(samp) / func(self.state))
+                        # * self.pdf(self.state) / self.pdf(samp))      
                 except ZeroDivisionError:
                     alpha = 1.0
                 ## 说明：q(xt + 1 | xt) = q(xt + 1, xt) / q(xt), vice versa
@@ -89,8 +92,8 @@ class MH:
         else:                           # 已经进入稳态
             samp = self.suggest()
             try:
-                alpha = min(1, func(samp) / func(self.state) * 
-                    self.pdf(self.state) / self.pdf(samp))      
+                alpha = min(1, func(samp) / func(self.state))
+                    # * self.pdf(self.state) / self.pdf(samp))
             except ZeroDivisionError:
                 alpha = 1.0
             uni = np.random.uniform(0, 1)
