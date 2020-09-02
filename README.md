@@ -105,21 +105,21 @@
 - 总结在 `./Paper&Summary/` 下
 * 2020.8.19
     * 第一篇论文：Stixel world GPU加速理论，读完并能顺利跑GitHub代码
-    * 关于本篇论文的有关总结写在: [GPU-stixel-paper.md](file:./Paper&Summary/Paper/GPU-stixel-paper.md)
+    * 关于本篇论文的有关总结写在: [GPU-stixel-paper.md](https://github.com/Enigmatisms/Algorithms-Plus/blob/master/Paper%26Summary/Paper/GPU-stixel-paper.md)
 * 2020.8.20
     * 立体视觉入门PPT
-    * 总结写在 [Stereo-Vision-Intros.md](file:./Paper&Summary/StereoVisionIntros.md)
+    * 总结写在 [StereoVisionIntros.md](https://github.com/Enigmatisms/Algorithms-Plus/blob/master/Paper%26Summary/StereoVisionIntros.md)
 * 2020.8.21 - 22
     * MRF 以及概率论相关知识的补充
 * 2020.8.23
     * 第二篇论文：`基于置信传播的双目匹配算法` 完成
-    * 总结在 [Stereo-Matching-paper.md](file:./Paper&Summary/Paper/StereoMatchingpaper.md)
+    * 总结在 [Stereo-Matching-paper.md](https://github.com/Enigmatisms/Algorithms-Plus/blob/master/Paper%26Summary/Paper/StereoMatchingpaper.md)
 * 2020.8.31
     * 第三篇论文`VLOAM`完成
-    * 总结在 [VLOAM.md](file:./Paper&Summary/Paper/VLOAM.md)
+    * 总结在 [VLOAM.md](https://github.com/Enigmatisms/Algorithms-Plus/blob/master/Paper%26Summary/Paper/VLOAM.md)
 * 2020.9.2
     * 论文`SVO` 以及 `LK 20 years`(节选) 完成
-    * 见 [SVO.md](file:./Paper&Summary/Paper/SVO.md)
+    * 见 [SVO.md](https://github.com/Enigmatisms/Algorithms-Plus/blob/master/Paper%26Summary/Paper/SVO.md)
 
 ---
 ### TODOS
