@@ -35,7 +35,8 @@ class PCAKNN:
         # sample = u[:, :dim].dot(np.diag(s[:dim])).dot(vt[:dim, :])
 
         # 此操作才是真正进行压缩(PCA)
-        sample = u[:, :dim].dot(np.diag(s[:dim]))
+        # sample = u[:, :dim].dot(np.diag(s[:dim]))
+        sample = img.dot(u[:, :dim])
 
         # 将一个dim * dim 的矩阵reshape成一个行向量
         return sample.reshape(sample.size)
@@ -69,7 +70,7 @@ if __name__ == "__main__":
 
     train_path = "/home/sentinel"
 
-    train = 0
+    train = 1
     
     if train:
         cnt = []
