@@ -10,7 +10,7 @@
 - 信号滤波与概率滤波算法
 - CUDA 练习
 - 论文总结
-- 详细见[Main-Contents.md](#https://github.com/Enigmatisms/Algorithms-Plus/blob/master/Paper%26Summary/main-contents.md)
+- 详细见 [Main-Contents.md](#https://github.com/Enigmatisms/Algorithms-Plus/blob/master/Paper%26Summary/Paper/main-contents.md)
 
 ---
 ### TODOS
