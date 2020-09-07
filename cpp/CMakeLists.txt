@@ -27,7 +27,7 @@ link_directories(
 )
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR})
-add_executable(Task RANSAC.cc
+add_executable(Task opticalFlow.cc
 )
 
 target_link_libraries(Task
