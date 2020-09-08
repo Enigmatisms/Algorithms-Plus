@@ -95,10 +95,8 @@ void EKF<Ty, size>::update(double x, double y, double dt){
     Eigen::JacobiSVD<Matrix> svd(jacobi * stateCovPre * jacobi.transpose() + obsErrorCov, 
         Eigen::ComputeThinU | Eigen::ComputeThinV);
     // SVD求逆矩阵
-    // std::cout << "PRECOMP:" << std::endl;
     std::cout << stateCovPre << std::endl;
     temp = svd.matrixV() * svd.singularValues().asDiagonal().toDenseMatrix().inverse() * svd.matrixU().transpose();
-    // std::cout << "Temp:" << temp << std::endl;
     K = stateCovPre * jacobi.transpose() * temp;                        // 计算增益
     std::cout << "K (gain):" << std::endl << K << std::endl;
     statePost = statePre + K * (model - statePre);                       // 计算后验状态

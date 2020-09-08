@@ -14,22 +14,28 @@ if (NOT Eigen3_FOUND)
     message("No appropriate libeigen3 package found.")
 endif()
 
+find_package(Ceres REQUIRED)
+if (NOT Ceres_FOUND)
+    message("No appropriate ceres package found.")
+endif()
+
 include_directories(
     .
     ./KF
     /usr/local/include
     ${OpenCV_INCLUDE_DIRS}
     ${EIGEN3_INCLUDE_DIR}
+    ${CERES_INCLUDE_DIRS}
 )
 
 link_directories(
     /usr/local/lib
 )
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR})
-add_executable(Task opticalFlow.cc
+add_executable(Task direct.cc
 )
 
 target_link_libraries(Task
     ${OpenCV_LIBS}
+    ${CERES_LIBRARIES}
 )

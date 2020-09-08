@@ -15,17 +15,17 @@
 
 ---
 ### TODOS
-- [ ] 写一个shell语法总结性的文件
 - [x] sklearn 学一下
 - [x] sklearn PCA 数字识别
 - [x] sklearn KNN 原理，自己的实现以及PCA KNN组合的机器学习
+- [ ] 写一个shell语法总结性的文件
 
 #### 数据处理 & 机器学习
 - [x] SVM learn / practice / application
 - [x] LDA
 
 #### 概率机器人
-- [ ] 机器人运动分布
+- [x] 机器人运动分布
 - [ ] 粒子滤波实现
 
 #### 其他有意思的算法
@@ -40,5 +40,5 @@
 - [ ] KD树
  
 #### Recent
-- [ ] CUDA Programming learning
-
+- [x] CUDA Programming 入门
+- [ ] CUDA Chapter 4
