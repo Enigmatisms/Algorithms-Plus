@@ -11,6 +11,25 @@ Eigen::Matrix<Ty, x, y> getMatrix(){
     return mat;
 }
 
+template<typename T>
+void printVec(const T& vec, int size){
+    for (int i = 0; i < size - 1; i++){
+        std::cout << vec(i) << ", ";
+    }
+    std::cout << vec(size - 1) << std::endl;
+}
+
+// 输出方形矩阵
+template<typename T>
+void printMat(const T& mat, int size){
+    for (int i = 0; i < size; i++){
+        for (int j = 0; j < size - 1; j++){
+            std::cout << mat(i, j) << ", ";
+        }
+        std::cout << mat(i, size - 1) << std::endl;
+    }
+}
+
 int main(int, char **){
     A << 0, 1, 0, 1,
          0, 0, 1, 1,
@@ -68,5 +87,24 @@ int main(int, char **){
     std::cout << A2 << std::endl << std::endl;
     std::cout << A3 << std::endl << std::endl;
     std::cout << A4 << std::endl << std::endl;
+    std::cout << "=============================================\n";
+    Eigen::Quaterniond qr = Eigen::Quaterniond::Identity();
+    Eigen::Quaterniond q_inv = qr.conjugate();
+    Eigen::Vector3d t(0, 0, 1000);
+    Eigen::Matrix3d K;
+    K << 3968.3, 0, 1188.92,
+        0, 3968.3, 979.657,
+        0, 0, 1;
+    Eigen::Matrix3d Kinv = K.inverse();
+    double scale = 2.0, depth = 5470.815918;
+    Eigen::Vector3d p1(scale * 648.5, scale * 476.5, 1);
+    Eigen::Vector3d p2_cam = q_inv * (depth * Kinv * p1 - t);
+    Eigen::Vector3d p2 = K * p2_cam / p2_cam(2);
+    std::cout << "P1 Pixel:\n";
+    printVec<Eigen::Vector3d>(p1, 3);
+    std::cout << "P2 Camera:\n";
+    printVec<Eigen::Vector3d>(p2_cam, 3);
+    std::cout << "P2 Pixel:\n";
+    printVec<Eigen::Vector3d>(p2, 3);
     return 0;
 }
