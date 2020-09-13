@@ -15,29 +15,24 @@
 
 ---
 ### TODOS
-- [x] sklearn 学一下
-- [x] sklearn PCA 数字识别
-- [x] sklearn KNN 原理，自己的实现以及PCA KNN组合的机器学习
 - [ ] 写一个shell语法总结性的文件
 
-#### 数据处理 & 机器学习
-- [x] SVM learn / practice / application
-- [x] LDA
-
+#### 数据处理 & 机器学习 & 优化
+- [ ] EM 算法原理
+- [ ] 贝叶斯分类 & 决策树
+- [ ] SGD / 共轭梯度法
 #### 概率机器人
-- [x] 机器人运动分布
 - [ ] 粒子滤波实现
 
 #### 其他有意思的算法
-- [x] 蚁群算法 (TSP)
-- [x] 退火算法 (还需要解决一个TSP分析)
-- [x] 遗传算法 (mTSP)
+- [ ] 整数规划 分支定界法
+- [ ] DP与记忆体化(Python)
+- [ ] KD树
 
-#### 数据结构与算法复习
+#### 数据结构与算法复习 （C++）
 - [ ] 栈的STL库使用
 - [ ] 队列(queue)基操 deque对应函数的使用 priority_queue的应用
-- [ ] 堆
-- [ ] KD树
+- [ ] 堆及其相关应用
  
 #### Recent
 - [x] CUDA Programming 入门
