@@ -1,0 +1,22 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/sentinel/Algorithms-Plus/Data Structure/test.cc
+vector
+-
+stack
+-
+queue
+-
+iostream
+-
+string.h
+-
+opencv2/core.hpp
+-
+

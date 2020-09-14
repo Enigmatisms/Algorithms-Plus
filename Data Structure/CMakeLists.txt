@@ -3,5 +3,5 @@ project(Task)
 set(CMAKE_BUILD_TYPE "release")
 
 add_executable(Task
-    stack_dfs.cc
+    test.cc
 )

@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -DNDEBUG -rdynamic CMakeFiles/Task.dir/test.cc.o -o Task 
