@@ -32,7 +32,7 @@ link_directories(
     /usr/local/lib
 )
 
-add_executable(Task direct.cc
+add_executable(Task testPID.cc
 )
 
 target_link_libraries(Task
