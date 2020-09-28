@@ -32,7 +32,12 @@ link_directories(
     /usr/local/lib
 )
 
-add_executable(Task testPID.cc
+aux_source_directory(
+    ./BA  BA_SRC
+)
+
+add_executable(Task direct.cc
+    ${BA_SRC}
 )
 
 target_link_libraries(Task

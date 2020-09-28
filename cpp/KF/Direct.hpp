@@ -197,7 +197,8 @@ void Direct::optimization(const std::vector<cv::Mat>& depths, int size){
                         ceres::CostFunction* cost_func = ErrorTerm::Create(K, Kinv, _itp,
                             pixel, getPixel(pyramid[pyr], pt.x + i, pt.y + j), depth
                         );
-                        prob.AddResidualBlock(cost_func, nullptr, rotate.coeffs().data(), trans.data());
+                        ceres::LossFunction* huber_loss = new ceres::HuberLoss(1.0);
+                        prob.AddResidualBlock(cost_func, huber_loss, rotate.coeffs().data(), trans.data());
                     }
                 }
             }

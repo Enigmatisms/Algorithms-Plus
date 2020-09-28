@@ -11,7 +11,7 @@ int main(int argc, char ** argv){
     cv::Mat gray1, gray2;
     cv::cvtColor(p1, gray1, cv::COLOR_BGR2GRAY);
     cv::cvtColor(p2, gray2, cv::COLOR_BGR2GRAY);
-
+    
     int rows = p1.rows;
     int cols = p1.cols;
     int pyr_num = 3;
