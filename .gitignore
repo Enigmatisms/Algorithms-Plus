@@ -4,4 +4,7 @@
 *.mp4
 *.pkl
 /build/
+*/build
+*/*/build
+*/.vscode
 ! *.json
