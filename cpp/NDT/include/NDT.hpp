@@ -48,8 +48,8 @@ public:
         T _y = sin(param[2]) * (T)x + cos(param[2]) * (T)y + param[1];
         Eigen::Matrix<T, 2, 1> vec(_x, _y);
         vec = vec - mu;
-        auto product = - vec.transpose() * icov * vec;
-        residual[0] = - product.value();
+        auto product = vec.transpose() * icov * vec;
+        residual[0] = product.value();
         return true;
     }
 
@@ -73,32 +73,39 @@ private:
 // 新误差策略：点云不动，调整高斯分布的均值与方差，使得负对数最大
 class Error{
 public:
-    Error(const cv::Point2d& pt){
+    Error(const cv::Point2d& pt, double sig_c = 0.25){
         x = pt.x;
         y = pt.y;
+        sigma_coeff = sig_c;
     }
-    ~Error();
+    ~Error(){;}
 public:
-    // 参数应该是：平移 * 2 (均值) 三个参数（协方差矩阵的逆中的三个参数（对称））
+    // 参数应该是：平移 * 2 (均值) 三个参数：矩阵的方差 / 矩阵对角协方差     | a b |
+    // a = covp[0], c = covp[1], b = covp[2]                        | b c |
     template<typename T>
     bool operator()(const T* const u, const T* const covp, T* residual) const{
         Eigen::Matrix<T, 2, 2> icov;
-        icov << covp[0], covp[2], covp[2], covp[1];
+        T det = covp[0] * covp[1] - covp[2] * covp[2];      // 行列式
+        T eigen_coeff = covp[0] * covp[0] + covp[1] * covp[1] + (T)2 * covp[2] * covp[2];
+        icov << covp[1], - covp[2], - covp[2], covp[0];
+        icov /= det;
         Eigen::Matrix<T, 2, 1>  vec;
         vec << x - u[0], y - u[1];
-        auto product = - vec.transpose() * icov * vec;
-
-        // T _x = cos(param[2]) * (T)x - sin(param[2]) * (T)y + param[0];
-        // T _y = sin(param[2]) * (T)x + cos(param[2]) * (T)y + param[1];
-        // Eigen::Matrix<T, 2, 1> vec(_x, _y);
-        // vec = vec - mu;
-        // auto product = - vec.transpose() * icov * vec;
-        // residual[0] = - product.value();
+        auto product = vec.transpose() * icov * vec;
+        // T constrain = (T)0.1 * (vec(0) * vec(0) + vec(1) * vec(1));
+        residual[0] = (T)product.value() - (T)sigma_coeff * log(eigen_coeff);      // pdf前乘以特征值的几何平均（整体取负对数，略去常数）
         return true;
+    }
+
+    static ceres::CostFunction* Create(const cv::Point2d& pt, double sig_c = 0.25){
+        return new ceres::AutoDiffCostFunction<Error, 1, 2, 3>(
+            new Error(pt, sig_c)
+        );
     }
 private:
     double x;
     double y;
+    double sigma_coeff;
 };
 
 class NDT{
@@ -122,7 +129,14 @@ public:
     /// 求解位姿变换（如何从getPerturb点云匹配到初始点云？），并绘制变换后的点云
     void minimize(const std::vector<cv::Point2d>& pts, cv::Mat& src, double init_angle);
 
-    void readAndConvert(std::string path, std::vector<cv::Point2d>& pts);
+    cv::Mat readAndConvert(std::vector<cv::Point2d>& pts, int number, uchar thresh = 60);
+
+    void lightMatching(cv::Mat& src1, cv::Mat& src2, int number, double sig_c = 0.25);
+
+    /// 估计初始值
+    void initParamEstimate(const std::vector<cv::Point2d>& pts, double* u, double* covp) const;
+
+    void drawGaussian(cv::Mat& src, const Eigen::Vector2d& mu, const Eigen::Matrix2d& cov);       // 二维高斯分布绘制
 private:
     /// 计算以(X_SIG, Y_SIG)为中心，(X_SIG, Y_SIG)为两个方向的标准差，两个方向独立的高斯分布PDF
     static double gauss2d(double x, double y){
@@ -136,6 +150,7 @@ private:
     Eigen::Matrix2d cov;                        // 协方差
     std::mutex mtx;
     cv::RNG* rng;
+    const std::string prefix = "/home/sentinel/light/";     // 路径前缀
 };
 
 
