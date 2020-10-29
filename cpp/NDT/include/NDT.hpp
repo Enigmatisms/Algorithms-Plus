@@ -31,51 +31,14 @@
 #define TRANS_Y 50.0
 #define ANGLE 0.8
 
-// 误差函数定义
-class ErrorTerm{
-public:
-    ErrorTerm(const cv::Point2d& pt, const Eigen::Vector2d& _mu, const Eigen::Matrix2d& _icov):
-        mu(_mu), icov(_icov), x(pt.x), y(pt.y)
-    {
-        ;
-    }
-    ~ErrorTerm(){;}
-public:
-    // 最大PDF误差函数定义 （最小化负对数）
-    template<typename T>
-    bool operator()(const T* const param, T* residual) const{
-        T _x = cos(param[2]) * (T)x - sin(param[2]) * (T)y + param[0];
-        T _y = sin(param[2]) * (T)x + cos(param[2]) * (T)y + param[1];
-        Eigen::Matrix<T, 2, 1> vec(_x, _y);
-        vec = vec - mu;
-        auto product = vec.transpose() * icov * vec;
-        residual[0] = product.value();
-        return true;
-    }
-
-    // 创建误差函数
-    static ceres::CostFunction* Create(
-        const cv::Point2d& pt,
-        const Eigen::Vector2d& _mu,
-        const Eigen::Matrix2d& _icov
-    ){
-        return new ceres::AutoDiffCostFunction<ErrorTerm, 1, 3>(
-            new ErrorTerm(pt, _mu, _icov)
-        );
-    }
-private:
-    const Eigen::Vector2d& mu;
-    const Eigen::Matrix2d& icov;        // 协方差矩阵的逆
-    double x;
-    double y;
-};
+#define print_var(x) (std::cout << #x << ": " << x << std::endl)
 
 // 新误差策略：点云不动，调整高斯分布的均值与方差，使得负对数最大
 class Error{
 public:
-    Error(const cv::Point2d& pt, double sig_c = 0.25){
-        x = pt.x;
-        y = pt.y;
+    Error(const std::vector<cv::Point3d>& _pts, double sig_c = 0.25):
+        pts(_pts)
+    {
         sigma_coeff = sig_c;
     }
     ~Error(){;}
@@ -83,58 +46,41 @@ public:
     // 参数应该是：平移 * 2 (均值) 三个参数：矩阵的方差 / 矩阵对角协方差     | a b |
     // a = covp[0], c = covp[1], b = covp[2]                        | b c |
     template<typename T>
-    bool operator()(const T* const u, const T* const covp, T* residual) const{
+    bool operator()(const T* const u, const T* const icovp, T* residual) const{
         Eigen::Matrix<T, 2, 2> icov;
-        T det = covp[0] * covp[1] - covp[2] * covp[2];      // 行列式
-        T eigen_coeff = covp[0] * covp[0] + covp[1] * covp[1] + (T)2 * covp[2] * covp[2];
-        icov << covp[1], - covp[2], - covp[2], covp[0];
-        icov /= det;
-        Eigen::Matrix<T, 2, 1>  vec;
-        vec << x - u[0], y - u[1];
-        auto product = vec.transpose() * icov * vec;
-        // T constrain = (T)0.1 * (vec(0) * vec(0) + vec(1) * vec(1));
-        residual[0] = (T)product.value() - (T)sigma_coeff * log(eigen_coeff);      // pdf前乘以特征值的几何平均（整体取负对数，略去常数）
+        icov << icovp[0], icovp[2], icovp[2], icovp[1];
+        T res(0);
+        for (const cv::Point3d& pt: pts) {
+            Eigen::Matrix<T, 2, 1> vec(T(pt.x) - u[0], T(pt.y) - u[1]);
+            T product = - T(vec.transpose() * icov * vec) / T(2);
+            res += ceres::exp(product) * (T)pt.z;
+        }
+        print_var(res);
+        residual[0] = ceres::sqrt(1e3 - res);
         return true;
     }
 
-    static ceres::CostFunction* Create(const cv::Point2d& pt, double sig_c = 0.25){
+    static ceres::CostFunction* Create(const std::vector<cv::Point3d>& _pts, double sig_c = 0.25){
         return new ceres::AutoDiffCostFunction<Error, 1, 2, 3>(
-            new Error(pt, sig_c)
+            new Error(_pts, sig_c)
         );
     }
 private:
-    double x;
-    double y;
+    const std::vector<cv::Point3d>& pts;
     double sigma_coeff;
 };
 
 class NDT{
 public:
-    NDT(){
-        mu = Eigen::Vector2d(X_SIG, Y_SIG);
-        cov << X_SIG * X_SIG, 0, 0, Y_SIG * Y_SIG;
-        rng = new cv::RNG(time(NULL));
-    }
-    ~NDT(){
-        delete rng;
-    }
+    NDT(){;}
+    ~NDT(){;}
 public:
-    void initDistribute(cv::Mat& src);    // 生成初始分布（得到初始分布的一堆点并且绘图）
-
-    /// 实现的时候需要注意，我们随机地生成角度 / 平移量 记录在参数 a mov中
-    /// 在对初始点云进行变换的时候，角度 / 平移量还需要添加高斯随机数噪声，并且还需要随机投点（噪点）
-    /// 得到最后的点云为pts 我们优化pts
-    void getPerturbSim(cv::Mat& src, std::vector<cv::Point2d>& pts, double& a, cv::Point2d& mov, double sig = 1);  // 得到添加噪声后的仿真分布点云（当作我们的灯条)
-    
-    /// 求解位姿变换（如何从getPerturb点云匹配到初始点云？），并绘制变换后的点云
-    void minimize(const std::vector<cv::Point2d>& pts, cv::Mat& src, double init_angle);
-
-    cv::Mat readAndConvert(std::vector<cv::Point2d>& pts, int number, uchar thresh = 60);
+    cv::Mat readAndConvert(std::vector<cv::Point3d>& pts, int number, uchar thresh = 60);
 
     void lightMatching(cv::Mat& src1, cv::Mat& src2, int number, double sig_c = 0.25);
 
     /// 估计初始值
-    void initParamEstimate(const std::vector<cv::Point2d>& pts, double* u, double* covp) const;
+    void initParamEstimate(const std::vector<cv::Point3d>& pts, double* u, double* covp) const;
 
     void drawGaussian(cv::Mat& src, const Eigen::Vector2d& mu, const Eigen::Matrix2d& cov);       // 二维高斯分布绘制
 private:
@@ -145,11 +91,7 @@ private:
         );
     }
 private:
-    std::vector<cv::Point2d> init_pts;          // 初始点云
-    Eigen::Vector2d mu;                         // 均值
-    Eigen::Matrix2d cov;                        // 协方差
     std::mutex mtx;
-    cv::RNG* rng;
     const std::string prefix = "/home/sentinel/light/";     // 路径前缀
 };
 
