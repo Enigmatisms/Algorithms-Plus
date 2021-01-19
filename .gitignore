@@ -2,7 +2,9 @@
 *.db
 *.avi
 *.mp4
+*.out
 *.pkl
+*/*.out
 /build/
 */build
 */*/build

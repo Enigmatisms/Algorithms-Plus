@@ -1,14 +1,14 @@
 #include "include/NDT.hpp"
 
-int main(int argc, char* argv[]){
+int main(int argc, char* argv[]) {
     cv::Mat origin;
     cv::Mat result;
     double sig_c = 0.08;
     int number = 0;
-    if (argc == 3){
-        sig_c = (double)atof(argv[2]);
+    if (argc == 3) {
+        sig_c = atof(argv[2]);
     }
-    if (argc >= 2){
+    if (argc >= 2) {
         number = atoi(argv[1]);
     }
     cv::namedWindow("origin", cv::WINDOW_NORMAL);
