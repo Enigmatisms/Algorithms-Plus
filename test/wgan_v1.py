@@ -1,0 +1,3 @@
+
+
+print("Test auto training.")
