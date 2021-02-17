@@ -1,13 +1,16 @@
 #ifndef __VOLUME_UTILS_HPP
 #define __VOLUME_UTILS_HPP
+#include <map>
+#include <opencv2/core.hpp>
 
 #define VISUAL_X 40
 #define VISUAL_Y 30
 #define BLOCK_SIZE 30
+#define NUMERICAL_ZERO 1e-4 // abs小于这个值的均认为是0
 #define BLOCK_LEFT 0x03     // 边界orient与 0x03之后为0则可以加入
 #define BLOCK_RIGHT 0x02    // 边界orient与 0x02后不为0则可以加入
-#define BLOCK_UP 0x0c       // 边界orient与 0xc0后为0则可以加入
-#define BLOCK_DOWN 0x08     // 边界orient与 0x80后不为0可以加入
+#define BLOCK_UP 0x0c       // 边界orient与 0x0c后为0则可以加入
+#define BLOCK_DOWN 0x08     // 边界orient与 0x08后不为0可以加入
 
 /**
  * 2D平面体积光实现
@@ -39,7 +42,8 @@ enum DIRECT{
     UP = 0,
     DOWN = 1,
     LEFT = 2,
-    RIGHT = 3
+    RIGHT = 3,
+    IDLE = 4
 };
 
 enum octOrient{
@@ -53,7 +57,11 @@ enum octOrient{
     BR = 0x0a      // 右下
 };
 
+extern const std::map<octOrient, cv::Scalar> colors;
+
 extern const cv::Point dirs[4];
+
+extern const int steps;
 
 
 #endif  //__VOLUME_UTILS_HPP

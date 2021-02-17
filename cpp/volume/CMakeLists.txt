@@ -40,7 +40,7 @@ aux_source_directory(
     ./src SRC
 )
 
-add_executable(Task testVolume.cc
+add_executable(Task volumeSmooth.cc
     ${SRC}
 )
 
