@@ -100,7 +100,7 @@ public:
     ///@brief 平滑移动
     void moveSmooth(DIRECT mv, std::string win_name);
 
-    void generateMap(int stone_num = 80);
+    void generateMap(int stone_num = 80, bool random = true);
 
     ///@brief 分块计算边界
     void getOutSideEdgeByBlock();

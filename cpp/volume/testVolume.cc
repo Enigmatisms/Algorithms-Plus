@@ -10,7 +10,7 @@ int main(int argc, char* argv[]){
     std::cout << "Volume created.\n";
     bool render_flag = false;
     while (true){
-        // vol.debugDisplay(render_flag);
+        vol.debugDisplay(render_flag);
         char key = cv::waitKey(0);
         if (key == ' '){
             vol.reset();

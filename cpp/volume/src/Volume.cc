@@ -124,7 +124,7 @@ Volume::Volume(int stone_num)
     std::chrono::system_clock clk;
     uint64_t t = clk.now().time_since_epoch().count();
     rng = new cv::RNG(t);
-    generateMap(stone_num);
+    generateMap(stone_num, false);
     #ifdef RECORD
 	    outputVideo.open(outPath, DIVX, 60.0, sWH);		
     #endif
@@ -141,7 +141,7 @@ Volume::~Volume(){
     delete [] occ;
 }
 
-void Volume::generateMap(int stone_num){
+void Volume::generateMap(int stone_num, bool random){
     // 中空化
     #pragma omp parallel for num_threads(4)
     for (int i = 1; i < VISUAL_Y - 1; i++){
@@ -149,14 +149,23 @@ void Volume::generateMap(int stone_num){
             occ[i][j] = 0;
         }
     }
-    // 随机生成部分石块
-    for (int k = 0; k < stone_num; k++){
-        int x = 0, y = 0;
-        do {
-            x = rng->uniform(1, VISUAL_X - 2);
-            y = rng->uniform(1, VISUAL_Y - 2);
-        } while(x == 1 && y == 1);
-        occ[y][x] = 1;
+    if (random){
+        // 随机生成部分石块
+        for (int k = 0; k < stone_num; k++){
+            int x = 0, y = 0;
+            do {
+                x = rng->uniform(1, VISUAL_X - 2);
+                y = rng->uniform(1, VISUAL_Y - 2);
+            } while(x == 1 && y == 1);
+            occ[y][x] = 1;
+        }
+    }
+    else {
+        for (int i = 3; i < 28; i+= 3){
+            for (int j = 3; j < 38; j+= 3){
+                occ[i][j] = 1;
+            }
+        }
     }
 }
 
@@ -364,15 +373,15 @@ void Volume::debugDisplay(std::string win_name, bool render_flag){
             }
         }
     }
-    map.forEach<cv::Vec3b>(
-        [&](cv::Vec3b& pix, const int* pos){
-            if (pix[0] == 0xff){        // 为白色
-                double dist = std::pow(pos[1] - pos_map.x, 2) + std::pow(pos[0] - pos_map.y, 2);
-                uchar res = std::max(20.0, 255.0 - 235.0 / luminous_range * dist);
-                pix[0] = pix[1] = pix[2] = res;
-            }
-        }
-    );
+    // map.forEach<cv::Vec3b>(
+    //     [&](cv::Vec3b& pix, const int* pos){
+    //         if (pix[0] == 0xff){        // 为白色
+    //             double dist = std::pow(pos[1] - pos_map.x, 2) + std::pow(pos[0] - pos_map.y, 2);
+    //             uchar res = std::max(20.0, 255.0 - 235.0 / luminous_range * dist);
+    //             pix[0] = pix[1] = pix[2] = res;
+    //         }
+    //     }
+    // );
     for (size_t i = 0; i < all_edges.size(); i++){
         if (all_edges[i].isValid() == true){
             all_edges[i].drawSelf(map);

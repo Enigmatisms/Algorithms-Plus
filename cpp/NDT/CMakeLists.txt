@@ -36,7 +36,7 @@ aux_source_directory(
     ./src SRC
 )
 
-add_executable(Task testLight.cc
+add_executable(Task testDiffusion.cc
     ${SRC}
 )
 

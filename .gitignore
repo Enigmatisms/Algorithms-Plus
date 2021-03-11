@@ -9,4 +9,6 @@
 */build
 */*/build
 */.vscode
+data/
+*.xml
 ! *.json
