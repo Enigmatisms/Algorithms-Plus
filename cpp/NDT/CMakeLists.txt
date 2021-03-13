@@ -40,7 +40,17 @@ add_executable(Task testDiffusion.cc
     ${SRC}
 )
 
+add_executable(Task2 testLight.cc
+    ${SRC}
+)
+
+
 target_link_libraries(Task
+    ${OpenCV_LIBS}
+    ${CERES_LIBRARIES}
+)
+
+target_link_libraries(Task2
     ${OpenCV_LIBS}
     ${CERES_LIBRARIES}
 )

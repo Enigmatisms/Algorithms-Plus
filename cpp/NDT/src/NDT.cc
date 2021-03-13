@@ -16,12 +16,12 @@ cv::Mat NDT::readAndConvert(ptsType& pts, int number) const{
     return src;
 }
 
-void NDT::readAndConvert(std::vector<double>& pts, cv::Mat& dst1, cv::Mat& dst2, int number) const{
+void NDT::readAndConvert(std::vector<double>& pts, cv::Mat& dst, int number) const{
     std::string path = prefix + std::to_string(number) + ".png";
-    dst1 = cv::imread(path, 0);
-    cv::threshold(dst1, dst1, 60, 255, cv::THRESH_TOZERO);
-    dst2.create(cv::Size(dst1.cols, dst1.rows), CV_64FC1);
-    dst1.convertTo(dst2, CV_64FC1);
+    dst = cv::imread(path, 0);
+    cv::threshold(dst, dst, 60, 255, cv::THRESH_TOZERO);
+    cv::Mat dst2(cv::Size(dst.cols, dst.rows), CV_64FC1);
+    dst.convertTo(dst2, CV_64FC1);
     cv::normalize(dst2, dst2, 1.0, 0.0, cv::NORM_INF);
     pts.resize(dst2.cols * dst2.rows);
     dst2.forEach<double>(
@@ -31,14 +31,45 @@ void NDT::readAndConvert(std::vector<double>& pts, cv::Mat& dst1, cv::Mat& dst2,
     );
 }
 
-void NDT::diffusionEstimate(const cv::Mat& src1, double* top, double* ctr, double* pars) {
-    int col = src1.cols, row = src1.rows;
-    top[0] = double(col) / 2.0;
-    top[1] = 0.0;
-    ctr[0] = top[0];
-    ctr[1] = double(row) / 2.0;
-    pars[0] = 3.0;          // 取a = 3时，截止（10 / 255）位置近似为b + 1(.06)
-    pars[1] = 2;
+inline float getPointDist(const cv::Point2f &p1, const cv::Point2f &p2){
+    return ((p1.x-p2.x)*(p1.x-p2.x) + (p1.y-p2.y)*(p1.y-p2.y));
+}
+
+void getMidPoints(const cv::RotatedRect &rect, cv::Point2f &p1, cv::Point2f &p2){
+    cv::Point2f tmp_p1, tmp_p2, corners[4];                                     //找出角点
+    rect.points(corners);
+    float d1 = getPointDist(corners[0], corners[1]);            //0/1点距离的平方
+	float d2 = getPointDist(corners[1], corners[2]);            //1/2点距离的平方
+	int i0 = d1 > d2? 1 : 0;								    //长所在边第一个顶点的位置
+    tmp_p1 = (corners[i0] + corners[i0 + 1]) / 2;			    //获得旋转矩形两条短边上的中点
+	tmp_p2 = (corners[i0 + 2] + corners[(i0 + 3) % 4]) / 2;
+    if(tmp_p1.y > tmp_p2.y){                                    //保证输出点的顺序
+        p2 = (tmp_p1 + tmp_p2) / 2;    
+        p1 = tmp_p2;
+    }
+    else{                                                       //必须是p1是处于上方的点，p2处于下方（y轴更大）
+        p1 = tmp_p1;
+        p2 = (tmp_p1 + tmp_p2) / 2;
+    }
+}
+
+void NDT::betterInitialize(const cv::Mat& src, double* _top, double* _ctr) const {
+    std::vector<std::vector<cv::Point> > contours;
+    cv::Mat dst;
+    cv::threshold(src, dst, 1, 255, cv::THRESH_BINARY);
+    cv::findContours(dst, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
+    const std::vector<cv::Point>& pts = *std::max_element(contours.begin(), contours.end(), 
+        [&](const std::vector<cv::Point>& c1, const std::vector<cv::Point>& c2) {
+            return c1.size() < c2.size();
+        }
+    );
+    cv::RotatedRect rect = cv::minAreaRect(pts);
+    cv::Point2f tp, mp;
+    getMidPoints(rect, tp, mp);
+    _top[0] = tp.x;
+    _top[1] = tp.y;
+    _ctr[0] = mp.x;
+    _ctr[1] = mp.y;
 }
 
 void NDT::initParamEstimate(const ptsType& pts, double* u, double* cov) const{
@@ -93,8 +124,9 @@ void NDT::lightMatching(cv::Mat& src1, cv::Mat& src2, int number, double sig_c){
     prob.AddResidualBlock(cost, nullptr, mu, icov);
     ceres::Solver::Options opts;
     opts.minimizer_progress_to_stdout = false;
+    opts.minimizer_type = ceres::LINE_SEARCH;
     opts.max_num_iterations = 100;
-    opts.function_tolerance = 1e-4;
+    opts.function_tolerance = 1e-5;
     ceres::Solver::Summary summary;
     ceres::Solve(opts, &prob, &summary);
     // std::cout << summary.FullReport() << std::endl;
@@ -111,28 +143,33 @@ void NDT::lightMatching(cv::Mat& src1, cv::Mat& src2, int number, double sig_c){
     saveToFile(src1, src2, number);
 }
 
-void NDT::lightDiffusion(cv::Mat& src1, cv::Mat& src2, int number) {
+void NDT::lightDiffusion(cv::Mat& src1, cv::Mat& src2, int number, double radius) {
     double top[2];
-    double ctr[2];
-    double params[2];
-    cv::Mat tmp;
+    double ctr[3];
     std::vector<double> values;
-    readAndConvert(values, src1, tmp, number);
+    readAndConvert(values, src1, number);
     src2.create(src1.rows, src1.cols, CV_8UC1);
-    diffusionEstimate(src1, top, ctr, params);
-    printf("Initial condition: %lf, %lf, %lf, %lf, %lf, %lf\n", top[0], top[1], ctr[0], ctr[1], params[0], params[1]);
+
+    betterInitialize(src1, top, ctr);
+    ctr[2] = 0.0;
+
+    printf("Initial condition: %lf, %lf, %lf, %lf, %lf, %lf\n", top[0], top[1], ctr[0], ctr[1], radius + ctr[2]);
     ceres::Problem prob;
-    ceres::CostFunction* cost = ErrorTerm::Create(values, src1.cols, src1.rows);
-    prob.AddResidualBlock(cost, nullptr, top, ctr, params);
+    ceres::CostFunction* cost = ErrorTerm::Create(values, src1.cols, src1.rows, radius);
+    prob.AddResidualBlock(cost, nullptr, top, ctr);
     ceres::Solver::Options opts;
-    opts.minimizer_progress_to_stdout = false;
+    opts.minimizer_type = ceres::LINE_SEARCH;
+    opts.line_search_direction_type = ceres::LBFGS;
+    opts.linear_solver_type = ceres::DENSE_QR;
+    opts.line_search_type = ceres::WOLFE;
+    opts.minimizer_progress_to_stdout = true;
     opts.max_num_iterations = 100;
     opts.function_tolerance = 1e-4;
     ceres::Solver::Summary summary;
     ceres::Solve(opts, &prob, &summary);
-    // std::cout << summary.FullReport() << std::endl;
-    printf("End condition: %lf, %lf, %lf, %lf, %lf, %lf\n", top[0], top[1], ctr[0], ctr[1], params[0], params[1]);
-    drawDiffusion(src2, top, ctr, params);
+    std::cout << summary.FullReport() << std::endl;
+    printf("End condition: %lf, %lf, %lf, %lf, %lf\n", top[0], top[1], ctr[0], ctr[1], radius + ctr[2]);
+    drawDiffusion(src2, top, ctr, radius + ctr[2]);
     saveToFile(src1, src2, number);
 }
 
@@ -149,7 +186,7 @@ void NDT::drawGaussian(cv::Mat& src, const Eigen::Vector2d& mu, const Eigen::Mat
 }
 
 template <typename T>
-void NDT::drawDiffusion(cv::Mat& src, const T* const _top, const T* const _ctr, const T* const _dec) const {
+void NDT::drawDiffusion(cv::Mat& src, const T* const _top, const T* const _ctr, T radius) const {
     int img_col = src.cols, img_row = src.rows;
     Eigen::Matrix<T, 2, 1> top(_top[0], _top[1]);
     Eigen::Matrix<T, 2, 1> ctr(_ctr[0], _ctr[1]);
@@ -160,7 +197,6 @@ void NDT::drawDiffusion(cv::Mat& src, const T* const _top, const T* const _ctr, 
     #pragma omp parallel for num_threads(8) 
     for (int i = 0; i < img_row; i++) {
         uchar* row_data = &src.data[i * img_col];
-        int base = i * img_col;
         for (int j = 0; j < img_col; j++) {
             Eigen::Matrix<T, 2, 1> t2n(T(j) - top(0), T(i) - top(1)), b2n(T(j) - bottom(0), T(i) - bottom(1));
             T t_len = t2n.norm(), b_len = b2n.norm(); 
@@ -172,7 +208,7 @@ void NDT::drawDiffusion(cv::Mat& src, const T* const _top, const T* const _ctr, 
             else {
                 dist = b_len >= t_len ? t_len : b_len;
             }
-            T decay = T(1) / (std::exp(_dec[0] * (dist - _dec[1])) + T(1));     // 计算光线衰减
+            T decay = T(1) / (std::exp(T(_A) * (dist - radius)) + T(1));     // 计算光线衰减
             row_data[j] = uchar(decay * 255);
         }
     }
