@@ -243,7 +243,7 @@ if __name__ == "__main__":
             if len(boxes):
                 _, labels = dt.predict(segs)
                 # ============================ 使用 label 的代码加在此处（比如要将label发出去） ===========================
-    
+                
                 # ===================================================================================================
                 img = Detector.drawPredicted(img, labels, boxes)
             cv2.imshow('disp', img)

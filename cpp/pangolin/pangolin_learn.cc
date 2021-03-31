@@ -18,7 +18,7 @@ void drawCubeFrame(GLfloat linew, GLfloat l){
     glEnableClientState(GL_VERTEX_ARRAY);
     glVertexPointer(3, GL_FLOAT, 0, frame_vex);
     for (int d = 0; d < 3; d++){
-        glColor3ub(RED[d], RED[(d + 1) % 3], RED[(d + 2) % 3]);
+        glColor3ub(255, 0, 0);
         glDrawArrays(GL_LINES, d * 8, 8);
     }
 }

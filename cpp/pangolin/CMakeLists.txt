@@ -42,7 +42,7 @@ aux_source_directory(
     ./src  SRC
 )
 
-add_executable(Task Cube.cc
+add_executable(Task pangolin_learn.cc
     ${SRC}
 )
 
