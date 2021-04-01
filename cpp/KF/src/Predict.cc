@@ -45,32 +45,43 @@ static void solve(const Vector6d& state, const Msg& msg, Eigen::Vector3d& pos)
         }
         old_delta = delta_t;
     }
-    pos(0) = now(0) + 1.0 * t_sum * state(2) + 0.1 * t_sum * t_sum * state(4);
-    pos(2) = now(1) + 1.0 * t_sum * state(3) + 0.1 * t_sum * t_sum * state(5);
+    // double t_sum = 5;
+    pos(0) = now(0) + 1.2 * t_sum * state(2) + 0.01 * t_sum * t_sum * state(4);
+    pos(2) = now(1) + 1.2 * t_sum * state(3) + 0.01 * t_sum * t_sum * state(5);
 }
 
 // =========================== 非static主要预测逻辑 ===============================
 
-Predict::Predict() {
+Predict::Predict(bool use_robust) {
     this_K << 
         1776.67168581218, 0, 720,
         0, 1778.59375346543, 540,
         0, 0, 1;
     reset();
+    inov_cnt = 0;
+    direct = 1.0;
+    robust = use_robust;
     rng = new cv::RNG(std::chrono::system_clock::now().time_since_epoch().count());
+    init_point = std::chrono::system_clock::now();
+    if (use_robust) {
+        file.open("../data/data_robust.txt", std::ios::out);
+    }
+    else {
+        file.open("../data/data_standard.txt", std::ios::out);
+    }
 }
 
 Predict::~Predict() {
+    file.close();
     delete rng;
 }
 
 void Predict::reset() {
     init = false;
     A = Matrix6d::Identity();
-    Matrix6d rd = Matrix6d::Random();
-    P = rd * rd.transpose();
-    Q = 400 * rd * rd.transpose();
-    R = 0.1 * rd * rd.transpose();
+    P.setZero();
+    R = 1 * Matrix6d::Identity();
+    Q = 800 * Matrix6d::Identity() + R;
     state_post = Vector6d::Zero();
     state_pre = Vector6d::Zero();
     saved_time_point = std::chrono::system_clock::now();
@@ -93,10 +104,10 @@ void Predict::project2World(
 void Predict::calcObvserved(const Eigen::Vector3d& pw, Vector6d& obs, double dt, double lambda) const {
     obs(0) = pw(0);     // x->x
     obs(1) = pw(2);     // x->y
-    obs(2) = (obs(0) - state_post(0)) * lambda + state_post(2) * (1 - lambda);
-    obs(3) = (obs(1) - state_post(1)) * lambda + state_post(3) * (1 - lambda);
-    obs(4) = (obs(2) - state_post(2)) * lambda + state_post(4) * (1 - lambda);
-    obs(5) = (obs(3) - state_post(3)) * lambda + state_post(5) * (1 - lambda);
+    obs(2) = (obs(0) - state_post(0)) * lambda + state_post(2) * (1 - lambda) * 0.6 + 0.4 * (1 - lambda) * state_pre(2);
+    obs(3) = (obs(1) - state_post(1)) * lambda + state_post(3) * (1 - lambda) * 0.6 + 0.4 * (1 - lambda) * state_pre(3);
+    obs(4) = (obs(2) - state_post(2)) * lambda + state_post(4) * (1 - lambda) * 0.6 + 0.4 * (1 - lambda) * state_pre(4);
+    obs(5) = (obs(3) - state_post(3)) * lambda + state_post(5) * (1 - lambda) * 0.6 + 0.4 * (1 - lambda) * state_pre(5);
 }
 
 bool Predict::translatePredict(const cv::Point3f& t_cam, const Msg& msg, Eigen::Vector3d& cam_p) {
@@ -112,12 +123,12 @@ bool Predict::translatePredict(const cv::Point3f& t_cam, const Msg& msg, Eigen::
         return false;
     }
     double dt_s = chronoGetTime(saved_time_point);      // 根据上一次保存的时间计算以秒为单位的时间间隔
-    calcObvserved(pw, obs, dt_s, 0.5);
+    calcObvserved(pw, obs, dt_s, 0.4);
     calcStateTransit(dt_s);
     P = A * P * A.transpose() + Q;
     Matrix6d invPr = (P + R).ldlt().solve(I6d);
     Matrix6d K = P * invPr;
-    if (false) {                                     // 传统KF
+    if (robust == false) {                                     // 传统KF
         state_pre = A * state_post;                 // 没有中间控制量，注意state_post是上次预测估计的输出
         // pw 也就是 pw(0) = x(车右方), pw(1) = y(竖直向下), pw(2) = z 车直线向前
         // 根据上次预测的结果，根据时间，推算当前应该在什么位置
@@ -125,6 +136,7 @@ bool Predict::translatePredict(const cv::Point3f& t_cam, const Msg& msg, Eigen::
         P = (I6d - K) * P;
     }
     else {              // Huber函数的抗差KF（没有解析解，所以优化问题需要ceres）
+
         Mat12d Exp = Mat12d::Zero();
         Exp.block<6, 6>(0, 0) = P;
         Exp.block<6, 6>(6, 6) = R;
@@ -137,6 +149,9 @@ bool Predict::translatePredict(const cv::Point3f& t_cam, const Msg& msg, Eigen::
         tmp.block<6, 1>(0, 0) = state_post;
         tmp.block<6, 1>(6, 0) = obs;
         Vec12d Y = Sinv * tmp;
+        state_pre = A * state_post;
+        Vector6d inov = obs - state_pre;
+        // state_pre = state_post;
         ceres::Problem state_prob;
         ceres::CostFunction* cost_func = RobustStateProb::Create(X, Y, 1);
         state_prob.AddResidualBlock(cost_func, nullptr, state_post.data());
@@ -150,13 +165,19 @@ bool Predict::translatePredict(const cv::Point3f& t_cam, const Msg& msg, Eigen::
         ceres::Solver::Summary summary;
         ceres::Solve(opts, &state_prob, &summary);
         // P = (X.transpose() * X).ldlt().solve(Matrix6d::Identity());
+        // state_post(2) = 0.5 * state_post(2) + 0.5 * state_pre(2);
+        // state_post(3) = 0.5 * state_post(3) + 0.5 * state_pre(3);
+        // state_post(4) = 0.5 * state_post(4) + 0.5 * state_pre(4);
+        // state_post(5) = 0.5 * state_post(5) + 0.5 * state_pre(5);
         P -= K * P;
+        noiseDEstimate(inov);
     }
     // state_post 是当前对状态的估计，那么只需要当前加速度 / 速度 / 位置进行双迭代 (x, y, vx, vy, ax, ay)
     // 双迭代在这里进入
     Eigen::Vector3d result(0, pw(1), 0);                        // 先不考虑非平面运动 (pw(1)是竖直方向的)
     solve(state_post, msg, result);                             // 恒定加速度 / 速度的双迭代
     cam_p = c2w.conjugate() * result;                           // 从result（预测之后的世界坐标）转化为相机坐标
+    file << t_cam.x << ',' << cam_p(0) << std::endl;
     return true;
 }
 
@@ -172,12 +193,29 @@ void Predict::calcStateTransit(double dt) {
     0, 0, 0, 0, 0, 1;
 }
 
-Eigen::Vector3d Predict::simulateTarget(double z) {
+Eigen::Vector3d Predict::simulateTarget(double z, enum SimType type) {
     double now = std::chrono::system_clock::now().time_since_epoch().count() / 1e6;
-    double freq = 0.001;
-    double x = 2000 * std::sin(freq * now);
+    now -= init_point.time_since_epoch().count() / 1e6;
+    double freq = 0.0011;
+    double x = 0.0;
+    if (type == Tanh) {
+        double res = direct * std::tanh(0.006 * now - 3);
+        if (res >= 0.99995) {
+            init_point = std::chrono::system_clock::now();
+            direct = -1;
+        }
+        else if (res <= -0.99995){
+            init_point = std::chrono::system_clock::now();
+            direct = 1;
+        }
+        x = res * 1000;
+    }
+    else {
+        x = 1000 * std::sin(freq * now);
+    }
+    
     printf("X now is: %lf, now t is %lf, freq: %f\n", x, now, freq);
-    return Eigen::Vector3d(x, 0, z) + z / 300 * Eigen::Vector3d::Random();
+    return Eigen::Vector3d(x, 0, z) + z / 400 * Eigen::Vector3d::Random();
 }
 
 void Predict::drawProjected(cv::Mat& src, const Eigen::Vector3d& tar, const Eigen::Vector3d& pre) {
@@ -187,4 +225,54 @@ void Predict::drawProjected(cv::Mat& src, const Eigen::Vector3d& tar, const Eige
     Eigen::Vector3d ptar = pre / pre(2);
     Eigen::Vector3d ppj = this_K * ptar;
     cv::circle(src, cv::Point(ppj(0), ppj(1)), 10, cv::Scalar(0, 255, 0), -1);
+}
+
+template<typename T, template <typename ELEM, typename Alloc = std::allocator<ELEM> > typename Contain>
+T findMedian(const Contain<T>& dq) {
+    std::vector<T> tmp;
+    size_t half = dq.size() / 2;
+    tmp.assign(dq.begin(), dq.end());
+    for (T v: tmp) {
+        std::cout << v << ", ";
+    }
+    std::cout << std::endl;
+    std::nth_element(tmp.begin(), tmp.begin() + half, tmp.end());
+    return tmp[half];
+}
+
+const double huber_bounds[6] = {4.0, 5.0, 4.0, 5.0, 1.5, 2.0};
+void Predict::noiseDEstimate(const Vector6d& inov) {
+    for (int i = 0; i < 6; i++)
+        innovation[i].emplace_back(inov(i));
+    if (inov_cnt < DEQUE_SIZE) {     // innovation cnt smaller than 7
+        inov_cnt++;
+        return;
+    }
+    else {
+        for (int i = 0; i < 6; i++)
+            innovation[i].pop_front();
+        double res[6];
+        memset(res, 0.1, 6 * sizeof(double));
+        // #pragma omp parallel for num_threads(6)
+        for (int i = 0; i < 6; i++) {
+            double med = findMedian(innovation[i]);
+            std::vector<double> diff;
+            for (double inov: innovation[i])
+                diff.emplace_back(std::abs(inov - med) / 0.6745);
+            double d = findMedian(diff) + 1e-5;
+            res[i] = std::accumulate(innovation[i].begin(), innovation[i].end(), 0.0) / double(DEQUE_SIZE);
+            RobustCovProb::MakeProb2Solve(innovation[i], d, huber_bounds[i], &res[i]);
+        }
+        for (int i = 0; i < 6; i++) {
+            R(i, i) = 0.0;
+            for (double val: innovation[i]) {
+                double inter = val - res[i];
+                R(i, i) += std::pow(inter, 2);
+            }
+            R(i, i) = std::sqrt(R(i, i)) / DEQUE_SIZE;
+        }
+        // R -= P;
+        Q = 800 * R;
+        std::cout << R << std::endl;
+    }
 }

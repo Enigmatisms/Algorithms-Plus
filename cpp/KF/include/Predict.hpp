@@ -6,8 +6,12 @@
 #include <Eigen/Cholesky>
 #include <Eigen/Core>
 #include <iostream>
+#include <fstream>
 #include <chrono>
+#include <deque>
 #include "RobustError.hpp"
+
+#define DEQUE_SIZE 25
 
 struct Msg {
     float x;
@@ -20,6 +24,11 @@ struct Msg {
         ;
     }
 }; 
+
+enum SimType {
+    Tanh = 0,               // Tanh 近似方波
+    Sinusoid = 1           // 正弦波
+};
 
 // 欧拉角转四元数 RPY 定义
 static Eigen::Quaterniond angle2Quat(float r, float p, float y, bool is_rad = false){
@@ -38,7 +47,7 @@ static Eigen::Quaterniond angle2Quat(float r, float p, float y, bool is_rad = fa
 
 class Predict {
 public:
-    Predict();
+    Predict(bool use_robust = false);
     ~Predict();
 public:
     /// @brief 输入当前敌方位姿，根据pitch, yaw进行投影，在世界坐标系下进行预测，预测结果反投影回到相机坐标系，便于电控接收
@@ -46,7 +55,7 @@ public:
     bool translatePredict(const cv::Point3f& t_cam, const Msg& msg, Eigen::Vector3d& cam_p);
 
     /// @brief 模拟目标
-    Eigen::Vector3d simulateTarget(double z);
+    Eigen::Vector3d simulateTarget(double z, enum SimType type);
 
     /// @brief 预测绘制
     void drawProjected(cv::Mat& src, const Eigen::Vector3d& tar, const Eigen::Vector3d& pre);
@@ -59,6 +68,8 @@ private:
 
     /// 计算状态转移矩阵
     void calcStateTransit(double dt);
+
+    void noiseDEstimate(const Vector6d& obs);
 
     static void project2World(
         const cv::Point3f& t_cam,
@@ -75,6 +86,13 @@ private:
     Vector6d state_post;    // 后验状态
     Vector6d state_pre;     // 先验状态
     std::chrono::_V2::system_clock::time_point saved_time_point;
+    std::chrono::_V2::system_clock::time_point init_point;
     Eigen::Matrix3d this_K;
     cv::RNG* rng;
+    std::fstream file;
+    std::deque<double> innovation[6];
+    size_t inov_cnt;
+
+    bool robust;
+    double direct;
 };

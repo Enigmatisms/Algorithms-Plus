@@ -55,7 +55,7 @@ int main(){
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         inter.Activate(camera);
         
-        Eigen::Vector3d sim = pre.simulateTarget(8000), pred;
+        Eigen::Vector3d sim = pre.simulateTarget(8000, Tanh), pred;
         cv::Point3d cam_p(sim(0), sim(1), sim(2));
         pre.translatePredict(cam_p, msg, pred);
         drawCubeFrame(sim / 1000, cv::Scalar(0, 255, 0), 0.04);
