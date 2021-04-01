@@ -64,12 +64,12 @@ public:
     void reset();
 private:
     /// 根据当前值计算观测值，需要计时
-    void calcObvserved(const Eigen::Vector3d& pw, Vector6d& obs, double dt, double lambda = 0.5) const;
+    void calcObvserved(const Eigen::Vector3d& pw, Eigen::Vector4d& obs, double dt, double lambda = 0.5) const;
 
     /// 计算状态转移矩阵
     void calcStateTransit(double dt);
 
-    void noiseDEstimate(const Vector6d& obs);
+    void noiseDEstimate(const Eigen::Vector4d& obs);
 
     static void project2World(
         const cv::Point3f& t_cam,
@@ -79,18 +79,18 @@ private:
     );
 private:
     bool init;
-    Matrix6d A;      // 状态转移
-    Matrix6d P;      // 状态转移协方差
-    Matrix6d Q;      // 状态转移误差
-    Matrix6d R;      // 观测误差
-    Vector6d state_post;    // 后验状态
-    Vector6d state_pre;     // 先验状态
+    Eigen::Matrix4d A;      // 状态转移
+    Eigen::Matrix4d P;      // 状态转移协方差
+    Eigen::Matrix4d Q;      // 状态转移误差
+    Eigen::Matrix4d R;      // 观测误差
+    Eigen::Vector4d state_post;    // 后验状态
+    Eigen::Vector4d state_pre;     // 先验状态
     std::chrono::_V2::system_clock::time_point saved_time_point;
     std::chrono::_V2::system_clock::time_point init_point;
     Eigen::Matrix3d this_K;
     cv::RNG* rng;
     std::fstream file;
-    std::deque<double> innovation[6];
+    std::deque<double> innovation[4];
     size_t inov_cnt;
 
     bool robust;

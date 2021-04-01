@@ -6,18 +6,15 @@
 #include <deque>
 #include <vector>
 
-typedef Eigen::Matrix<double, 6, 6> Matrix6d;
-typedef Eigen::Matrix<double, 6, 1> Vector6d;
-typedef Eigen::Matrix<double, 12, 12> Mat12d;
-typedef Eigen::Matrix<double, 12, 1> Vec12d;
-typedef Eigen::Matrix<double, 12, 6> HalfMat12d;
-typedef Eigen::Matrix<double, 1, 6> RowVector6d;
+typedef Eigen::Matrix<double, 8, 8> Mat8d;
+typedef Eigen::Matrix<double, 8, 1> Vec8d;
+typedef Eigen::Matrix<double, 8, 4> HalfMat8d;
 
 /// 状态后验的鲁棒估计
 class RobustStateProb {
 public:
     /// Huber函数的参数可以在外部设置
-    RobustStateProb(const HalfMat12d& _X, const Vec12d& _y, double dt):
+    RobustStateProb(const HalfMat8d& _X, const Vec8d& _y, double dt):
         X(_X), y(_y)
     {
         delta = dt;
@@ -25,8 +22,8 @@ public:
 
     ~RobustStateProb() {}
 
-    static ceres::CostFunction* Create(const HalfMat12d& _X, const Vec12d& _y, double dt) {
-        return new ceres::AutoDiffCostFunction<RobustStateProb, 1, 6>(
+    static ceres::CostFunction* Create(const HalfMat8d& _X, const Vec8d& _y, double dt) {
+        return new ceres::AutoDiffCostFunction<RobustStateProb, 1, 4>(
             new RobustStateProb(_X, _y, dt)
         );
     }
@@ -34,12 +31,12 @@ public:
     template <typename T>
     bool operator() (const T* const beta, T* residual) const {
         residual[0] = T(0);
-        Eigen::Matrix<T, 6, 1> Beta;
-        Beta << beta[0], beta[1], beta[2], beta[3], beta[4], beta[5];
+        Eigen::Matrix<T, 4, 1> Beta;
+        Beta << beta[0], beta[1], beta[2], beta[3];
         T b = T(delta);
-        for (int i = 0; i < 12; i++) {
-            Eigen::Matrix<T, 1, 6> Xt;
-            Xt << T(X(i, 0)), T(X(i, 1)), T(X(i, 2)), T(X(i, 3)), T(X(i, 4)), T(X(i, 5));
+        for (int i = 0; i < 8; i++) {
+            Eigen::Matrix<T, 1, 4> Xt;
+            Xt << T(X(i, 0)), T(X(i, 1)), T(X(i, 2)), T(X(i, 3));
             T res = T(y(i)) - Xt.dot(Beta);
             if (res >= b) {
                 residual[0] += T(2) * b * (res) - b;
@@ -54,8 +51,8 @@ public:
         return true;
     }
 private:
-    const HalfMat12d& X;
-    const Vec12d& y;
+    const HalfMat8d& X;
+    const Vec8d& y;
     double delta;
 };
 
@@ -78,8 +75,8 @@ public:
         prob.AddResidualBlock(cost, nullptr, res);
         ceres::Solver::Options opts;
         opts.linear_solver_type = ceres::DENSE_QR;
-        opts.minimizer_type = ceres::LINE_SEARCH;
-        opts.line_search_direction_type = ceres::LBFGS;
+        // opts.minimizer_type = ceres::LINE_SEARCH;
+        // opts.line_search_direction_type = ceres::LBFGS;
         opts.minimizer_progress_to_stdout = false;
         opts.max_linear_solver_iterations = 50;
         opts.function_tolerance = 1e-6;
