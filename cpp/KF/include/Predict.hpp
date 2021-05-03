@@ -92,7 +92,9 @@ private:
     std::fstream file;
     std::deque<double> innovation[6];
     size_t inov_cnt;
+    ceres::Solver::Options state_opts;
 
     bool robust;
     double direct;
+    double air_k;
 };
