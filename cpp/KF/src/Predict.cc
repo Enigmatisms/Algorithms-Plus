@@ -41,7 +41,7 @@ static void solve(const Vector6d &state, const Msg &msg, Eigen::Vector3d &pos, f
         y_temp += dy;
 
         delta_t = calcTime(dist, msg.z, angle, k);
-        now(0) = now0 + delta_t * state(2) * 10 + 0.5 * delta_t * delta_t * state(4) * 10;
+        now(0) = now0 + delta_t * state(2) * 15 + 0.5 * delta_t * delta_t * state(4) * 15;
         now(1) = now1 + delta_t * state(3) * 3 + 0.5 * delta_t * delta_t * state(5);
         dist = now.norm() / 1000;
 
@@ -103,7 +103,7 @@ void Predict::reset() {
     saved_time_point = std::chrono::system_clock::now();
 }
 
-// 6个state x, y, vx, vy, ax, ay;
+// 4个state x, y, vx, vy
 // 相机系 根据云台位姿 投影 到 世界坐标系下 由于 在真实的比赛环境下，可能出现高度不统一的情况，所以得到的pw为3D位姿 存在z轴
 // 电控的初始位置（pitch正前方，yaw为磁力计零位）对应的相机坐标系为世界坐标系（不考虑原点平移）
 void Predict::project2World(
@@ -200,14 +200,12 @@ bool Predict::translatePredict(const cv::Point3f& t_cam, const Msg& msg, Eigen::
 
 // 一个CA模型
 void Predict::calcStateTransit(double dt) {
-    double vx = state_post(2), vy = state_post(3), ax = state_post(4), ay = state_post(5);
+    double vx = state_post(2), vy = state_post(3);
     A << 
-    1, 0, dt * vx, 0, 0.5 * ax * dt * dt, 0,
-    0, 1, 0, dt * vy, 0, 0.5 * ax * dt * dt,
-    0, 0, 1, 0, ax * dt, 0,
-    0, 0, 0, 1, 0, ay * dt,
-    0, 0, 0, 0, 1, 0,
-    0, 0, 0, 0, 0, 1;
+    1, 0, dt * vx, 0,
+    0, 1, 0, dt * vy,
+    0, 0, 1, 0,
+    0, 0, 0, 1;
 }
 
 Eigen::Vector3d Predict::simulateTarget(double z, enum SimType type) {
@@ -249,10 +247,6 @@ T findMedian(const Contain<T>& dq) {
     std::vector<T> tmp;
     size_t half = dq.size() / 2;
     tmp.assign(dq.begin(), dq.end());
-    for (T v: tmp) {
-        std::cout << v << ", ";
-    }
-    std::cout << std::endl;
     std::nth_element(tmp.begin(), tmp.begin() + half, tmp.end());
     return tmp[half];
 }
@@ -266,7 +260,7 @@ void Predict::noiseDEstimate(const Vector6d& inov) {
         return;
     }
     else {
-        for (int i = 0; i < 6; i++)
+        for (int i = 0; i < 4; i++)
             innovation[i].pop_front();
         double res[6];
         memset(res, 0.1, 6 * sizeof(double));
@@ -279,7 +273,7 @@ void Predict::noiseDEstimate(const Vector6d& inov) {
             double d = findMedian(diff) + 1e-5;
             RobustCovProb::MakeProb2Solve(innovation[i], d, huber_bounds[i], &res[i]);
         }
-        for (int i = 0; i < 6; i++) {
+        for (int i = 0; i < 4; i++) {
             R(i, i) = 0.0;
             for (double val: innovation[i]) {
                 double inter = val - res[i];

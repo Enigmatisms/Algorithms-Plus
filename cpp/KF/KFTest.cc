@@ -6,7 +6,7 @@ int main(int argc, char* argv[]) {
         return -1;
     }
     bool use_robust_kf = atoi(argv[1]);
-    double z = 8000;
+    double z = 5000;
     bool slow_judge = false;
     int delay_time = 10;
     Msg msg(0, 0, 15);
