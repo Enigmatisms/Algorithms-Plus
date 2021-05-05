@@ -1,6 +1,6 @@
 #include "../include/Predict.hpp"
 
-const Eigen::Matrix4d I4d = Eigen::Matrix4d::Identity();
+const Matrix6d I6d = Matrix6d::Identity();
 
 inline static double chronoGetTime(std::chrono::system_clock::time_point& old) {
     auto now = std::chrono::system_clock::now();
@@ -9,45 +9,51 @@ inline static double chronoGetTime(std::chrono::system_clock::time_point& old) {
     return interval.count();            // 返回以秒为单位的时间间隔
 }
 
-#define K0 0.00831
 #define _GRAVITY 9.79
-static float BulletModel(float x, float v, float angle)
+static float BulletModel(float x, float v, float angle, float k)
 {
-    return x * _GRAVITY / (K0 * v * cosf(angle)) + tanf(angle) * x +
-           1 / (K0 * K0) * _GRAVITY * logf(1 - K0 * x / (v * cosf(angle)));
+    return x * _GRAVITY / (k * v * cosf(angle)) + tanf(angle) * x +
+           1 / (k * k) * _GRAVITY * logf(1 - k * x / (v * cosf(angle)));
 }
 
-static float calcTime(float x, float v, float angle)
+static float calcTime(float x, float v, float angle, float k)
 {
-    return (-1 / (K0) * logf(1 - K0 * x / (v * cosf(angle))));
+    return (-1 / (k)*logf(1 - k * x / (v * cosf(angle))));
 }
+
 
 #define _RAD2DEG 57.29578
-static void solve(const Eigen::Vector4d& state, const Msg& msg, Eigen::Vector3d& pos)
+static void solve(const Vector6d &state, const Msg &msg, Eigen::Vector3d &pos, float k, double dt_s)
 {
     Eigen::Vector2d now = state.block<2, 1>(0, 0);
     float y_temp, y_act, dy, delta_t = 0.0, old_delta = 0.0;
     float angle = msg.y / _RAD2DEG, start_angle = angle;
-    float dist = now.norm() / 1000, y_pos = -pos(1) / 1000;      // 加负号的原因是，相机坐标系向下为正，而实际弹道解算应该向上为正
-    float t_sum = 0;
-    y_temp = dist * tanf(angle);                    // y_temp 为枪管指向的y位置, y_pos 为目标所在的y位置
+    float dist = now.norm() / 1000, y_pos = -pos(1) / 1000; // 加负号的原因是，相机坐标系向下为正，而实际弹道解算应该向上为正
+    y_temp = dist * tanf(angle);                            // y_temp 为枪管指向的y位置, y_pos 为目标所在的y位置
+    double now0 = now(0), now1 = now(1);
+    std::cout << "\n now0: " << now0 << " now1: " << now1 << std::endl;
     for (int i = 0; i < 25; i++)
     {
         angle = atan2f(y_temp, dist);
-        y_act = BulletModel(dist, msg.z, angle);
-        delta_t = calcTime(dist, msg.z, angle);
-        t_sum += delta_t;
+
+        y_act = BulletModel(dist, msg.z, angle, k);
         dy = y_pos - y_act;
         y_temp += dy;
+
+        delta_t = calcTime(dist, msg.z, angle, k);
+        now(0) = now0 + delta_t * state(2) * 15 + 0.5 * delta_t * delta_t * state(4) * 15;
+        now(1) = now1 + delta_t * state(3) * 3 + 0.5 * delta_t * delta_t * state(5);
+        dist = now.norm() / 1000;
+
         if (fabsf(delta_t - old_delta) < 0.01 && fabsf(dy) < 0.001)
         {
             break;
         }
         old_delta = delta_t;
     }
-    // double t_sum = 5;
-    pos(0) = now(0) + 1.0 * t_sum * state(2);
-    pos(2) = now(1) + 1.0 * t_sum * state(3);
+    pos(0) = now(0);
+    pos(2) = now(1);
+    printf("Delta t is %lf\n", dt_s);
 }
 
 // =========================== 非static主要预测逻辑 ===============================
@@ -69,6 +75,15 @@ Predict::Predict(bool use_robust) {
     else {
         file.open("../data/data_standard.txt", std::ios::out);
     }
+    air_k = 0.00831;
+
+    state_opts.linear_solver_type = ceres::DENSE_QR;
+    state_opts.minimizer_type = ceres::LINE_SEARCH;
+    state_opts.line_search_direction_type = ceres::LBFGS;
+    state_opts.minimizer_progress_to_stdout = false;
+    state_opts.max_linear_solver_iterations = 50;
+    state_opts.function_tolerance = 1e-6;
+    state_opts.logging_type = ceres::SILENT;
 }
 
 Predict::~Predict() {
@@ -78,12 +93,13 @@ Predict::~Predict() {
 
 void Predict::reset() {
     init = false;
-    A = Eigen::Matrix4d::Identity();
+    A = Matrix6d::Identity();
     P.setZero();
-    R = 1 * Eigen::Matrix4d::Identity();
-    Q = 800 * Eigen::Matrix4d::Identity() + R;
-    state_post = Eigen::Vector4d::Zero();
-    state_pre = Eigen::Vector4d::Zero();
+    Vector6d tmp;
+    R = Matrix6d::Identity();
+    Q = Matrix6d::Identity() * 64;
+    state_post = Vector6d::Zero();
+    state_pre = Vector6d::Zero();
     saved_time_point = std::chrono::system_clock::now();
 }
 
@@ -101,16 +117,18 @@ void Predict::project2World(
     pw = c2w * cam_t;
 }
 
-void Predict::calcObvserved(const Eigen::Vector3d& pw, Eigen::Vector4d& obs, double dt, double lambda) const {
+void Predict::calcObvserved(const Eigen::Vector3d& pw, Vector6d& obs, double dt, double lambda) const {
     obs(0) = pw(0);     // x->x
     obs(1) = pw(2);     // x->y
-    obs(2) = (obs(0) - state_post(0)) * lambda + state_post(2) * (1 - lambda);
-    obs(3) = (obs(1) - state_post(1)) * lambda + state_post(3) * (1 - lambda);
+    obs(2) = (obs(0) - state_post(0)) * lambda + state_post(2) * (1 - lambda) * 0.7 + 0.3 * (1 - lambda) * state_pre(2);
+    obs(3) = (obs(1) - state_post(1)) * lambda + state_post(3) * (1 - lambda) * 0.7 + 0.3 * (1 - lambda) * state_pre(3);
+    obs(4) = (obs(2) - state_post(2)) * lambda + state_post(4) * (1 - lambda) * 0.7 + 0.3 * (1 - lambda) * state_pre(4);
+    obs(5) = (obs(3) - state_post(3)) * lambda + state_post(5) * (1 - lambda) * 0.7 + 0.3 * (1 - lambda) * state_pre(5);
 }
 
 bool Predict::translatePredict(const cv::Point3f& t_cam, const Msg& msg, Eigen::Vector3d& cam_p) {
     Eigen::Vector3d pw;
-    Eigen::Vector4d obs;
+    Vector6d obs;
     Eigen::Quaterniond c2w;
     project2World(t_cam, msg.y, msg.x, pw, c2w);        // pw相当于当前观测
     if (init == false) {
@@ -121,58 +139,62 @@ bool Predict::translatePredict(const cv::Point3f& t_cam, const Msg& msg, Eigen::
         return false;
     }
     double dt_s = chronoGetTime(saved_time_point);      // 根据上一次保存的时间计算以秒为单位的时间间隔
-    calcObvserved(pw, obs, dt_s, 0.5);
+    calcObvserved(pw, obs, dt_s, 0.7);
     calcStateTransit(dt_s);
     P = A * P * A.transpose() + Q;
-    Eigen::Matrix4d invPr = (P + R).ldlt().solve(I4d);
-    Eigen::Matrix4d K = P * invPr;
-    if (robust == false) {                                     // 传统KF
-        state_pre = A * state_post;                 // 没有中间控制量，注意state_post是上次预测估计的输出
+    Matrix6d invPr = (P + R).ldlt().solve(I6d);
+    Matrix6d K = P * invPr;
+        if (robust == false)
+    {                               // 传统KF
+        state_pre = A * state_post; // 没有中间控制量，注意state_post是上次预测估计的输出
         // pw 也就是 pw(0) = x(车右方), pw(1) = y(竖直向下), pw(2) = z 车直线向前
         // 根据上次预测的结果，根据时间，推算当前应该在什么位置
         state_post = state_pre + K * (obs - state_pre);
-        P = (I4d - K) * P;
     }
-    else {              // Huber函数的抗差KF（没有解析解，所以优化问题需要ceres）
-
-        Mat8d Exp = Mat8d::Zero();
-        Exp.block<4, 4>(0, 0) = P;
-        Exp.block<4, 4>(4, 4) = R;
-        Mat8d S = Exp.llt().matrixL();
-        Mat8d Sinv = S.ldlt().solve(Mat8d::Identity()); //S^{-1}
-        HalfMat8d X;
-        X.block<4, 4>(0, 0) = Sinv.block<4, 4>(0, 0) + Sinv.block<4, 4>(0, 4);  // 分块矩阵乘法
-        X.block<4, 4>(4, 0) = Sinv.block<4, 4>(4, 0) + Sinv.block<4, 4>(4, 4);
-        Vec8d tmp;
-        tmp.block<4, 1>(0, 0) = state_post;
-        tmp.block<4, 1>(4, 0) = obs;
-        Vec8d Y = Sinv * tmp;
+    else
+    { // Huber函数的抗差KF（没有解析解，所以优化问题需要ceres）
+        Mat12d Exp = Mat12d::Zero();
+        Exp.block<6, 6>(0, 0) = P;
+        Exp.block<6, 6>(6, 6) = R;
+        Mat12d S = Exp.llt().matrixL();
+        Mat12d Sinv = S.ldlt().solve(Mat12d::Identity()); //S^{-1}
+        HalfMat12d X;
+        X.block<6, 6>(0, 0) = Sinv.block<6, 6>(0, 0) + Sinv.block<6, 6>(0, 6); // 分块矩阵乘法
+        X.block<6, 6>(6, 0) = Sinv.block<6, 6>(6, 0) + Sinv.block<6, 6>(6, 6);
+        Vec12d tmp;
+        tmp.block<6, 1>(0, 0) = state_post;
+        tmp.block<6, 1>(6, 0) = obs;
+        Vec12d Y = Sinv * tmp;
         state_pre = A * state_post;
-        Eigen::Vector4d old_state = state_post;
-        Eigen::Vector4d inov = obs - state_pre;
-        ceres::Problem state_prob;
-        ceres::CostFunction* cost_func = RobustStateProb::Create(X, Y, 1);
-        state_prob.AddResidualBlock(cost_func, nullptr, state_post.data());
-        ceres::Solver::Options opts;
-        opts.linear_solver_type = ceres::DENSE_QR;
-        opts.minimizer_type = ceres::LINE_SEARCH;
-        opts.line_search_direction_type = ceres::LBFGS;
-        opts.minimizer_progress_to_stdout = true;
-        opts.max_linear_solver_iterations = 50;
-        opts.function_tolerance = 1e-6;
-        ceres::Solver::Summary summary;
-        ceres::Solve(opts, &state_prob, &summary);
-        state_post(2) = state_post(2) * 0.5 + old_state(2) * 0.5;
-        state_post(3) = state_post(3) * 0.5 + old_state(3) * 0.5;
-        P -= K * P;
-        // noiseDEstimate(inov);
+        Vector6d old_state = state_post;
+        Vector6d inov = obs - state_pre;
+        // 并行进行状态与协方差估计，但是个人感觉这应该也是挺快的
+        #pragma omp parallel sections
+        {
+            #pragma omp section
+            {
+                ceres::Problem state_prob;
+                ceres::CostFunction *cost_func = RobustStateProb::Create(X, Y, 1);
+                state_prob.AddResidualBlock(cost_func, nullptr, state_post.data());
+                ceres::Solver::Summary summary;
+                ceres::Solve(state_opts, &state_prob, &summary);
+            }
+            #pragma omp section
+            {
+                noiseDEstimate(inov);
+            }
+        }
+        state_post(2) = state_post(2) * 0.25 + old_state(2) * 0.75;
+        state_post(3) = state_post(3) * 0.25 + old_state(3) * 0.75;
+        state_post(4) = state_post(4) * 0.25 + old_state(4) * 0.75;
+        state_post(5) = state_post(5) * 0.25 + old_state(5) * 0.75;
     }
+    P -= K * P;
     // state_post 是当前对状态的估计，那么只需要当前加速度 / 速度 / 位置进行双迭代 (x, y, vx, vy, ax, ay)
-    // 双迭代在这里进入
-    Eigen::Vector3d result(0, pw(1), 0);                        // 先不考虑非平面运动 (pw(1)是竖直方向的)
-    solve(state_post, msg, result);                             // 恒定加速度 / 速度的双迭代
-    cam_p = c2w.conjugate() * result;                           // 从result（预测之后的世界坐标）转化为相机坐标
-    file << t_cam.x << ',' << cam_p(0) << std::endl;
+    Eigen::Vector3d result(0, pw(1), 0);         // 先不考虑非平面运动 (pw(1)是竖直方向的)
+    solve(state_post, msg, result, air_k, dt_s); // 恒定速度的双迭代
+    cam_p = c2w.conjugate() * result;            // 从result（预测之后的世界坐标）转化为相机坐标
+    file << t_cam.x << ',' << t_cam.z << "," << cam_p.x() << "," << cam_p.z() << std::endl;
     return true;
 }
 
@@ -189,10 +211,10 @@ void Predict::calcStateTransit(double dt) {
 Eigen::Vector3d Predict::simulateTarget(double z, enum SimType type) {
     double now = std::chrono::system_clock::now().time_since_epoch().count() / 1e6;
     now -= init_point.time_since_epoch().count() / 1e6;
-    double freq = 0.0011;
+    double freq = 0.003;
     double x = 0.0;
     if (type == Tanh) {
-        double res = direct * std::tanh(0.006 * now - 3);
+        double res = direct * std::tanh(0.007 * now - 3);
         if (res >= 0.99995) {
             init_point = std::chrono::system_clock::now();
             direct = -1;
@@ -229,9 +251,9 @@ T findMedian(const Contain<T>& dq) {
     return tmp[half];
 }
 
-const double huber_bounds[4] = {4.0, 5.0, 4.0, 5.0};
-void Predict::noiseDEstimate(const Eigen::Vector4d& inov) {
-    for (int i = 0; i < 4; i++)
+const double huber_bounds[6] = {1.0, 0.2, 1.0, 0.2, 0.5, 0.1};
+void Predict::noiseDEstimate(const Vector6d& inov) {
+    for (int i = 0; i < 6; i++)
         innovation[i].emplace_back(inov(i));
     if (inov_cnt < DEQUE_SIZE) {     // innovation cnt smaller than 7
         inov_cnt++;
@@ -240,10 +262,10 @@ void Predict::noiseDEstimate(const Eigen::Vector4d& inov) {
     else {
         for (int i = 0; i < 4; i++)
             innovation[i].pop_front();
-        double res[4];
-        memset(res, 0.1, 4 * sizeof(double));
+        double res[6];
+        memset(res, 0.1, 6 * sizeof(double));
         // #pragma omp parallel for num_threads(4)
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 6; i++) {
             double med = findMedian(innovation[i]);
             std::vector<double> diff;
             for (double inov: innovation[i])
@@ -260,7 +282,7 @@ void Predict::noiseDEstimate(const Eigen::Vector4d& inov) {
             R(i, i) = std::sqrt(R(i, i)) / DEQUE_SIZE;
         }
         // R -= P;
-        Q = 800 * I4d + R;
+        Q = 64 * R;
         std::cout << R << std::endl;
     }
 }
