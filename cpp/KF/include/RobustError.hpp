@@ -70,19 +70,14 @@ public:
     
     ~RobustCovProb(){}
 
-    static double MakeProb2Solve(const std::deque<double>& _rs, double _r_med, double dt, double* res) {
+    static double MakeProb2Solve(const std::deque<double>& _rs, 
+        const ceres::Solver::Options& opts, double _r_med, double dt, double* res
+    ) {
         ceres::Problem prob;
         ceres::CostFunction* cost = new ceres::AutoDiffCostFunction<RobustCovProb, 1, 1>(
             new RobustCovProb(_rs, _r_med, dt)
         );
         prob.AddResidualBlock(cost, nullptr, res);
-        ceres::Solver::Options opts;
-        opts.linear_solver_type = ceres::DENSE_QR;
-        opts.minimizer_type = ceres::LINE_SEARCH;
-        opts.line_search_direction_type = ceres::LBFGS;
-        opts.minimizer_progress_to_stdout = false;
-        opts.max_linear_solver_iterations = 50;
-        opts.function_tolerance = 1e-6;
         ceres::Solver::Summary summary;
         ceres::Solve(opts, &prob, &summary);
     }

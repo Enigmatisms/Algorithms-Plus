@@ -1,21 +1,28 @@
 #include "include/Predict.hpp"
 
+double coeff_vx = 16;
+double coeff_ax = 32; 
+double speed_thresh = 8;
+double acc_thresh = 5;
+
 int main(int argc, char* argv[]) {
-    if (argc < 2) {
-        std::cerr << "Usage: ./Task <use Robust KF?>";
+    if (argc < 4) {
+        std::cerr << "Usage: ./Task <use Tanh?> <coeff_vx> <coeff_ax>";
         return -1;
     }
-    bool use_robust_kf = atoi(argv[1]);
+    bool use_tanh = atoi(argv[1]);
+    coeff_vx = atof(argv[2]);
+    coeff_ax = atof(argv[3]);
     double z = 5000;
     bool slow_judge = false;
     int delay_time = 10;
     Msg msg(0, 0, 15);
-    Predict pre(use_robust_kf);
+    Predict pre;
 
     cv::Mat img(1080, 1440, CV_8UC3);
     while (true) {
         cv::rectangle(img, cv::Rect(0, 0, 1440, 1080), cv::Scalar(0, 0, 0), -1);
-        Eigen::Vector3d sim = pre.simulateTarget(z, Tanh);
+        Eigen::Vector3d sim = pre.simulateTarget(z, SimType(1 - use_tanh));
         Eigen::Vector3d pred;
         cv::Point3d cam_p(sim(0), sim(1), sim(2));
         pre.translatePredict(cam_p, msg, pred);
