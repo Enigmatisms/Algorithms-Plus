@@ -62,6 +62,7 @@ Predict::Predict() {
         1776.67168581218, 0, 720,
         0, 1778.59375346543, 540,
         0, 0, 1;
+    median.resize(4);
     reset();
     inov_cnt = 0;
     direct = 1.0;
@@ -98,6 +99,9 @@ void Predict::reset() {
     saved_time_point = std::chrono::system_clock::now();
     acc_buff[0].clear();
     acc_buff[1].clear();
+    for (size_t i = 0; i < median.size(); i++) {
+        median[i].clear();
+    } 
 }
 
 // 4个state x, y, vx, vy
@@ -178,6 +182,16 @@ bool Predict::translatePredict(const cv::Point3f& t_cam, const Msg& msg, Eigen::
     state_post(3) = state_post(3) * 0.25 + old_state(3) * 0.75;
     state_post(4) = state_post(4) * 0.25 + old_state(4) * 0.75;
     state_post(5) = state_post(5) * 0.25 + old_state(5) * 0.75;
+    for (int i = 0; i < 4; i++) {
+        median[i].emplace_back(state_post(i + 2));
+        if (median[i].size() > 3) {//median blur
+            median[i].pop_front();
+            std::vector<double> tmp;
+            tmp.assign(median[i].begin(), median[i].end());
+            std::nth_element(tmp.begin(), tmp.begin() + 1, tmp.end());
+            state_post(i + 2) = tmp[1];
+        }
+    }
     P -= K * (P + R) * K.transpose();
     // state_post 是当前对状态的估计，那么只需要当前加速度 / 速度 / 位置进行双迭代 (x, y, vx, vy, ax, ay)
     Eigen::Vector3d result(state_post(0), pw(1), state_post(1)), delta_pos(0, pw(1), 0);
@@ -295,7 +309,7 @@ void Predict::noiseDEstimate(const Vector6d& inov) {
         return;
     }
     else {
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < 6; i++)
             innovation[i].pop_front();
         double res[6];
         memset(res, 0.1, 6 * sizeof(double));

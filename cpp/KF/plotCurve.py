@@ -45,16 +45,14 @@ if __name__ == "__main__":
 
         plt.subplot(2, 1, 2)
         plt.title('X axis speed & acceleration & predict')
-        plt.scatter(xsr, data_r[:, 4], c = 'r', s = 7)
-        plt.scatter(xsr, data_r[:, 6], c = 'b', s = 7)
         spd = data_r[:, 4].copy()
         acc = data_r[:, 6].copy()
         spd = spd / np.max(spd) * np.max(data_r[:, 2])
         acc = acc / np.max(acc) * np.max(data_r[:, 2])
-        plt.plot(xsr, spd, c = 'r', label = 'speed')
-        plt.plot(xsr, acc, c = 'b', label = 'acceleration')
-        plt.plot(xsr, data_r[:, 2], c = 'k', label = 'prediction', linestyle='--', alpha = 0.5)
-        plt.plot(xsr, data_r[:, 0], c = 'g', label = 'actual', linestyle='-.', alpha = 0.8)
+        plt.plot(xsr, spd, c = 'r', label = 'speed', linestyle='--', alpha = 0.5)
+        plt.plot(xsr, acc, c = 'b', label = 'acceleration', linestyle='-.', alpha = 0.8)
+        plt.plot(xsr, data_r[:, 2], c = 'k', label = 'prediction')
+        plt.plot(xsr, data_r[:, 0], c = 'g', label = 'actual')
         plt.grid(axis = 'both')
     else:
         err_r = data_r[:, 0] - data_r[:, 1]

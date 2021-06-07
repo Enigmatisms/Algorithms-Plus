@@ -107,6 +107,8 @@ private:
     std::deque<double> innovation[6];           // 新息
     std::deque<double> acc_buff[2];             // 两轴加速度缓冲区
     ceres::Solver::Options state_opts;
+    std::vector<std::deque<double> > median;    // 中值滤波
+
 
     double direct;
     double air_k;
