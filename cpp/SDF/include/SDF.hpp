@@ -15,9 +15,11 @@ typedef struct Edge {
     Eigen::Vector2d sp;
     Eigen::Vector2d ep;
     double weight;
+    Edge() {}
+    Edge(const Eigen::Vector2d& _sp, const Eigen::Vector2d& _ep): sp(_sp), ep(_ep), weight(1.0) {}    
 };
 
-typedef std::vector<Eigen::Vector3d> Mesh;
+typedef std::vector<Eigen::Vector2d> Mesh;
 typedef Eigen::Matrix<uchar, -1, -1> MatrixXu;
 typedef std::vector<Edge> Edges;
 
@@ -56,31 +58,30 @@ public:
      */
     void meshBoundingBox(const Edges& m1, const Edges& m2, Eigen::Vector2d& tl, Eigen::Vector2i& rnc) const;
 private:
+    /// @brief 输入一个完整mesh + boundingBox左上角anchor + boundingBox size，输出三通道：sdf / alpha / 最小值从属关系
     void singleMeshSDF(const Edges& m, const Eigen::Vector2d& tl, const Eigen::Vector2i& grid_size,
         Eigen::MatrixXd& sdf, Eigen::MatrixXd& alpha, Eigen::MatrixXi& idx) const;
-    /**
-     * @brief 计算出来的应该是 每个Grid上的SDF值，这样会方便之后的Marching Squares计算
-     */
+    
+    /// @brief 计算出来的应该是 每个Grid上的SDF值，这样会方便之后的Marching Squares计算
     void doubleMeshSDF(const Edges& m1, const Edges& m2, Eigen::MatrixXd& sdf) const ;
 
-
-    /// @todo
+    /**
+     * @brief 计算单个mesh段产生的sdf，需要分情况：是否是起始mesh / 是否是末尾mesh，是否是中间段mesh
+     * @note 假如是首尾两者之一，会附加alpha的计算，比中间段mesh更加复杂
+     * @note 输入一个mesh片段，boundingBox左上角的位置tl，输出一个sdf，一个alpha
+     */
     enum calcType {
         START   = 0,
         NORMAL  = 1,
         END     = 2,
     };
     template<calcType type>
-    void singleMeshPieceSDF(const Edge& eg, const Eigen::Vector2d& tl, Eigen::MatrixXd& sdf) const;
+    void singleMeshPieceSDF(const Edge& eg, const Eigen::Vector2d& tl, Eigen::MatrixXd& sdf, Eigen::MatrixXd& alpha) const;
 
-    /// @todo
     /// @brief 计算首尾段的val 直接修改结果alpha
     void alphaCalculation(const Edge& eg, const Eigen::Vector2d& tl, Eigen::MatrixXd& alpha, bool truc_start) const;
 
-    /// @todo
-    /**
-     * @brief 计算不同Grid对应的tags 以更快地确定如何进行交点计算
-     */
+    /// @brief 计算不同Grid对应的tags 以更快地确定如何进行交点计算
     void gridTagsCalculation(const Eigen::MatrixXd& sdf, MatrixXu& tags) const;
 
     /**
@@ -92,26 +93,23 @@ private:
     void marchingSquare(const Eigen::MatrixXd& sdf1, const Eigen::MatrixXd& sdf2, const Eigen::Vector4d& tlbr, EdgeMap& dst) const;
 
 private:
-    // 输入
-    /// @todo
-    void linearInterp(const Eigen::Vector4d& vals, const Vertex& pr, bool neg, Edges& dst) const;
+    void linearInterp(const Vertex& vtx, const Eigen::Vector4d& vals, Edges& edges) const;
 private:
     /**
      * 点顺序定义为： 这也是vals的(w, x, y, z) 注意激光扫描的方向是逆时针 此部分为线性插值
-     * p0   边0  p1
-     * 边3       边1
      * p3   边2  p2
+     * 边3       边1
+     * p0   边0  p1
      */ 
     // 使用8种情况表示 不同等高线情况，直接取p0恒为正数，对于不同的情况只需调换顺序
-    std::array<Vertex, 8> tb = {
-        Vertex{},
-        Vertex{{2, 3}},
-        Vertex{{1, 2}},
-        Vertex{{1, 3}},
-
-        Vertex{{0, 1}},
-        Vertex{{0, 3}, {1, 2}},
-        Vertex{{0, 2}},
-        Vertex{{0, 3}},
+    std::array<Vertex, 16> tb = {
+        Vertex{}, Vertex{{0, 3}}, Vertex{{1, 0}}, Vertex{{1, 3}},
+        Vertex{{1, 2}}, Vertex{{0, 1}, {2, 3}}, Vertex{{2, 0}}, Vertex{{2, 3}},
+        Vertex{{3, 2}}, Vertex{{0, 2}}, Vertex{{3, 0}, {1, 2}}, Vertex{{1, 2}},
+        Vertex{{3, 1}}, Vertex{{0, 1}}, Vertex{{3, 0}}, Vertex{}
+    };
+    
+    std::array<Eigen::Vector2d, 4> vertices = {
+        Eigen::Vector2d(0, 1), Eigen::Vector2d(1, 1), Eigen::Vector2d(1, 0), Eigen::Vector2d(0, 0)
     };
 };
