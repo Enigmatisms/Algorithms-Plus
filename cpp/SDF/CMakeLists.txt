@@ -4,6 +4,7 @@ set(CMAKE_BUILD_TYPE "release")
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 set(CMAKE_PREFIX_PATH "/home/sentinel/opencv-4.5.1/")
+set(CMAKE_BUILD_TYPE "Release")
 
 find_package(OpenCV 4.5.1 REQUIRED)
 if (NOT OpenCV_FOUND)
@@ -39,5 +40,13 @@ add_executable(Task sdf_test.cc
 )
 
 target_link_libraries(Task
+    ${OpenCV_LIBS}
+)
+
+add_executable(Task2 merge_sdf.cc
+    ${SRC}
+)
+
+target_link_libraries(Task2
     ${OpenCV_LIBS}
 )

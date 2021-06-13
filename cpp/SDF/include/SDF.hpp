@@ -1,48 +1,18 @@
 #pragma once
 
-#include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 #include <Eigen/Core>
 #include <Eigen/Dense>
-#include <vector>
 #include <iostream>
-#include <unordered_map>
+#include "meshTypes.h"
 
 /** 基于SDF的Mesh合并方法实现 */
 
-typedef struct Edge {
-    Eigen::Vector2d sp;
-    Eigen::Vector2d ep;
-    double weight;
-    Edge() {}
-    Edge(const Eigen::Vector2d& _sp, const Eigen::Vector2d& _ep): sp(_sp), ep(_ep), weight(1.0) {}    
-};
-
-typedef std::vector<Eigen::Vector2d> Mesh;
-typedef Eigen::Matrix<uchar, -1, -1> MatrixXu;
-typedef std::vector<Edge> Edges;
-
-struct hashFunctor {
-    template<typename T>
-    uint64_t operator() (const std::pair<T, T>& pr) const {
-        uint64_t h1 = std::hash<T>{}(pr.first);
-        uint64_t h2 = std::hash<T>{}(pr.second);
-        return h1 ^ h2;
-    }
-};
-
-struct equalFunctor {
-    template<typename T>
-    bool operator() (const std::pair<T, T>& p1, const std::pair<T, T>& p2) const {
-        return (p1.first == p2.first) && (p1.second == p2.second);
-    }
-};
-
-typedef std::unordered_map<std::pair<int, int>, Edges, hashFunctor, equalFunctor> EdgeMap;
 
 
-const double grid_size = 0.1;           // Marching Square使用的grid大小
+
+const double grid_size = 1;           // Marching Square使用的grid大小
 
 class SDF {
 using Vertex = std::vector<std::pair<uchar, uchar>>;
@@ -53,11 +23,11 @@ public:
     /**
      * @brief 将两个待匹配的Mesh限制在一个有裕量的BoundingBox里面
      * @param m1m2 是两个Mesh （为了方便起见，只考虑两个mesh具有重合的部分）
-     * @param t1br boundingBox的左上和右下点, tl = (w, x), br = (y, z) 
-     * @note 对于实际的两个mesh（能分段）也比较容易实现，只需要划分grid就好
+     * @param tl boundingBox的左上点
+     * @param rnc row and col
+     * @note 对于实际的两个mesh（能分段）也比较容易实现，只需要划分grid就好 裕量为两个grid的大小
      */
     void meshBoundingBox(const Edges& m1, const Edges& m2, Eigen::Vector2d& tl, Eigen::Vector2i& rnc) const;
-private:
     /// @brief 输入一个完整mesh + boundingBox左上角anchor + boundingBox size，输出三通道：sdf / alpha / 最小值从属关系
     void singleMeshSDF(const Edges& m, const Eigen::Vector2d& tl, const Eigen::Vector2i& grid_size,
         Eigen::MatrixXd& sdf, Eigen::MatrixXd& alpha, Eigen::MatrixXi& idx) const;
@@ -92,6 +62,27 @@ private:
      */
     void marchingSquare(const Eigen::MatrixXd& sdf1, const Eigen::MatrixXd& sdf2, const Eigen::Vector4d& tlbr, EdgeMap& dst) const;
 
+    void mesh2Edges(const Mesh& mesh, Edges& edges) const {
+        for (size_t i = 0; i < mesh.size() - 1; i++)
+            edges.emplace_back(mesh[i], mesh[i+1]);
+    }
+
+    void edges2Mesh(const Edges& edges, Mesh& mesh) const {
+        for (size_t i = 0; i < edges.size() - 1; i++)
+            mesh.push_back(edges[i].sp);
+        mesh.push_back(edges.back().sp);
+        mesh.push_back(edges.back().ep);
+    }
+public:
+    void addNoise2ExistingMesh(const Mesh& src, Mesh& dst, double sig) const {
+        for (const Eigen::Vector2d& pt: src) {
+            dst.push_back(pt + Eigen::Vector2d::Random() * sig);
+        }
+    }
+    // =====================  DEBUG ========================
+    void visualizeValues(const Eigen::MatrixXd& vals, const Eigen::Vector2d& tl, cv::Mat& dst) const;
+    void visualizeMesh(const Mesh& mesh, const cv::Vec3b& color, cv::Mat& dst) const;
+    void visualizeEdges(const Edges& edges, const cv::Vec3b& color, cv::Mat& dst) const;
 private:
     void linearInterp(const Vertex& vtx, const Eigen::Vector4d& vals, Edges& edges) const;
 private:
