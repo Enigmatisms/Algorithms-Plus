@@ -111,7 +111,6 @@ void SDF::doubleMeshSDF(const Edges& eg1, const Edges& eg2, Eigen::MatrixXd& sdf
     singleMeshSDF(eg2, tl, grid_size, sdf2, alpha2, idx2);
     sdf = Eigen::MatrixXd(grid_size(0), grid_size(1));
     sdf.setZero();
-    printf("Before combination\n");
     for (int i = 0; i < grid_size(0); i++) {
         for (int j = 0; j < grid_size(1); j++) {
             int index1 = idx1(i, j), index2 = idx2(i, j);
@@ -120,12 +119,41 @@ void SDF::doubleMeshSDF(const Edges& eg1, const Edges& eg2, Eigen::MatrixXd& sdf
             sdf(i, j) = (v1 * w1 + v2 * w2) / (w1 + w2);
         }
     }
-    printf("After combination\n");
-    cv::Mat image;
+    cv::Mat image, img1, img2, img3;
     visualizeValues(sdf, tl, image);
     visualizeEdges(eg1, color_g, image);
     visualizeEdges(eg2, color_k, image);
     cv::imshow("disp", image);
+
+    visualizeAlpha(alpha1, tl, img1);
+    visualizeAlpha(alpha2, tl, img2);
+    visualizeCombinedAlpha(alpha1, alpha2, tl, img3);
+    cv::imshow("combined", img3);
+    cv::imshow("sdf1", img1);
+    cv::imshow("sdf2", img2);
+    cv::waitKey(0);
+
+
+
+    // visualizeEdges(eg1, color_g, image);
+    // visualizeEdges(eg2, color_k, image);
+
+    // visualizeValues(sdf1, tl, img1);
+    // visualizeValues(sdf2, tl, img2);
+    // visualizeEdges(eg1, color_k, img1);
+    // visualizeEdges(eg2, color_k, img2);
+    // cv::imshow("disp", image);
+    // cv::imshow("sdf1", img1);
+    // cv::imshow("sdf2", img2);
+    // cv::waitKey(0);
+    EdgeMap emap;
+    marchingSquare(sdf, emap);
+    Mesh mesh;
+    visualizeValues(sdf, tl, image);
+    visualizeMarchingSquare(emap, tl, color_b, image);
+    searchSerialize(tl, emap, mesh);
+    visualizeMesh(mesh, color_k, image);
+    cv::imshow("march", image);
     cv::waitKey(0);
 }
 
@@ -191,7 +219,7 @@ void SDF::singleMeshPieceSDF(const Edge& eg, const Eigen::Vector2d& tl, Eigen::M
 }
  
 void SDF::alphaCalculation(const Edge& eg, const Eigen::Vector2d& tl, Eigen::MatrixXd& alpha, bool truc_start) const {
-    const Eigen::Vector2d s2c = tl - eg.sp, e2c = tl - eg.sp;
+    const Eigen::Vector2d s2c = tl - eg.sp, e2c = tl - eg.ep;
     Eigen::Vector2d direct = eg.ep - eg.sp;
     const Eigen::Vector2d normal = Eigen::Vector2d(-direct.y(), direct.x()).normalized();
     Eigen::Vector2d truc = direct / 4.0 * 3.0;
@@ -211,18 +239,16 @@ void SDF::alphaCalculation(const Edge& eg, const Eigen::Vector2d& tl, Eigen::Mat
             }
             if (over_truc == false) continue; 
             double new_alpha = 1.0 / (t2p.norm() + 1.0);
-            if (new_alpha < alpha(i, j))
+            if (new_alpha > alpha(i, j))
                 alpha(i, j) = new_alpha;
         }
     }
 }
 
-void SDF::marchingSquare(const Eigen::MatrixXd& sdf1, const Eigen::MatrixXd& sdf2, const Eigen::Vector4d& tlbr, EdgeMap& dst) const {
-    Eigen::MatrixXd lut = sdf1 + sdf2;          // SDF look up table
+void SDF::marchingSquare(const Eigen::MatrixXd& lut, EdgeMap& dst) const {
     MatrixXu tags;
     gridTagsCalculation(lut, tags);
     int cols = lut.cols(), rows = lut.rows();
-    double sx = tlbr.w(), sy = tlbr.x(), ex = tlbr.y(), ey = tlbr.z();
     for (int i = 0; i < rows - 1; i++) {
         for (int j = 0; j < cols - 1; j++) {
             Edges result;
@@ -230,9 +256,9 @@ void SDF::marchingSquare(const Eigen::MatrixXd& sdf1, const Eigen::MatrixXd& sdf
             const Vertex& vtx = tb[tag];
             Eigen::Vector4d vals;
             vals(0) = lut(i, j);
-            vals(1) = lut(i + 1, j);
-            vals(2) = lut(i, j + 1);
-            vals(3) = lut(i + 1, j + 1);
+            vals(1) = lut(i, j + 1);
+            vals(2) = lut(i + 1, j + 1);
+            vals(3) = lut(i + 1, j);
             linearInterp(vtx, vals, result);
             std::pair<int, int> pr = {i, j};
             for (const Edge& eg: result)                        // 保存所有边
@@ -248,7 +274,7 @@ void SDF::gridTagsCalculation(const Eigen::MatrixXd& sdf, MatrixXu& tags) const 
         for (int j = 0; j < cols - 1; j++) {
             Eigen::Vector4d vals;
             vals << sdf(i + 1, j), sdf(i + 1, j + 1), sdf(i, j + 1), sdf(i, j);
-            uchar tag = 0xff, and_elem = 0xfe;
+            uchar tag = 0x0f, and_elem = 0xfe;
             for (int k = 0; k < 4; k++) {
                 if (vals(k) < 0)
                     tag &= and_elem;
@@ -274,8 +300,49 @@ void SDF::linearInterp(const Vertex& vtx, const Eigen::Vector4d& vals, Edges& ed
     }
 }
 
+void SDF::searchSerialize(const Eigen::Vector2d& tl, EdgeMap& emap, Mesh& mesh) const {
+    std::stack<EdgeMap::const_iterator> its;
+    std::deque<Edge> edges;
+    its.push(emap.cbegin());
+    bool push_back = true;
+    while (its.empty() == false) {
+        EdgeMap::const_iterator it = its.top();
+        int row = it->first.first, col = it->first.second;
+        emap.erase(it);
+        its.pop();
+        for (const Edge& eg: it->second) {
+            Edge new_eg;
+            new_eg.sp = Eigen::Vector2d(col, row) + eg.sp + tl;
+            new_eg.ep = Eigen::Vector2d(col, row) + eg.ep + tl;
+            new_eg.weight = eg.weight;
+            if (push_back)
+                edges.push_back(new_eg);
+            else
+                edges.push_front(new_eg);
+        }
+        bool find_none = true;
+        for (const std::pair<int, int>& offset: neighbor_4) {
+            std::pair<int, int> pr(row + offset.first, col + offset.second);
+            EdgeMap::const_iterator cit = emap.find(pr);
+            if (cit != emap.end()) {
+                its.push(cit);
+                find_none = false;
+            }
+        }
+        if (find_none == true) {
+            push_back = false;
+            printf("PUSH_BACK = FALSE\n");
+        }
+    }
+    for (size_t i = 0; i < edges.size() - 1; i++)
+        mesh.push_back(edges[i].sp);
+    mesh.push_back(edges.back().sp);
+    mesh.push_back(edges.back().ep);
+}
+
+// ======================= DEBUG =========================
 void SDF::visualizeValues(const Eigen::MatrixXd& vals, const Eigen::Vector2d& tl, cv::Mat& dst) const {
-    dst.create(vals.rows() + int(tl(1)), vals.cols() + int(tl(0)), CV_8UC3);
+    dst.create(vals.rows() + int(tl(1) / grid_size), vals.cols() + int(tl(0) / grid_size), CV_8UC3);
     double maxi = std::abs(vals.maxCoeff()), mini = vals.minCoeff();
     #pragma omp parallel for num_threads(8)
     for (int i = 0; i < vals.rows(); i++) {
@@ -310,5 +377,56 @@ void SDF::visualizeEdges(const Edges& edges, const cv::Vec3b& color, cv::Mat& ds
         cv::Point p1(eg.sp.x() / grid_size, eg.sp.y() / grid_size);
         cv::Point p2(eg.ep.x() / grid_size, eg.ep.y() / grid_size);
         cv::line(dst, p1, p2, color);
+    }
+}
+
+void SDF::visualizeMarchingSquare(const EdgeMap& emap, const Eigen::Vector2d& tl, const cv::Vec3b& color, cv::Mat& dst) const {
+    double tlx = tl.x() / grid_size, tly = tl.y() / grid_size;
+    for (const auto& pr: emap) {
+        for (const Edge& eg: pr.second) {
+            cv::Point p1(eg.sp.x() / grid_size + pr.first.second + tlx, eg.sp.y() / grid_size + pr.first.first + tly);
+            cv::Point p2(eg.ep.x() / grid_size + pr.first.second + tlx, eg.ep.y() / grid_size + pr.first.first + tly);
+            cv::line(dst, p1, p2, color);
+        }
+    }
+}
+
+void SDF::visualizeAlpha(const Eigen::MatrixXd& alpha, const Eigen::Vector2d& tl, cv::Mat& dst) const {
+    int tlx = int(tl(0) / grid_size), tly = int(tl(1) / grid_size);
+    dst.create(tly + alpha.rows(), tlx + alpha.cols(), CV_8UC3);
+    double max_val = alpha.maxCoeff();
+    #pragma omp parallel for num_threads(8)
+    for (int i = 0; i < alpha.rows(); i++) {
+        for (int j = 0; j < alpha.cols(); j++) {
+            uchar val = alpha(i, j) / max_val * 255;
+            dst.at<cv::Vec3b>(i + tly, j + tlx) = cv::Vec3b(val, val, val);
+        }
+    }
+}
+
+void SDF::visualizeCombinedAlpha(const Eigen::MatrixXd& a1, const Eigen::MatrixXd& a2, const Eigen::Vector2d& tl, cv::Mat& dst) const {
+    Eigen::MatrixXd a = a1 + a2;
+    int tlx = int(tl(0) / grid_size), tly = int(tl(1) / grid_size);
+    dst.create(tly + a.rows(), tlx + a.cols(), CV_8UC3);
+    double max_val = a.maxCoeff();
+    #pragma omp parallel for num_threads(8)
+    for (int i = 0; i < a.rows(); i++) {
+        for (int j = 0; j < a.cols(); j++) {
+            uchar val = a(i, j) / max_val * 255;
+            dst.at<cv::Vec3b>(i + tly, j + tlx) = cv::Vec3b(val, val, val);
+        }
+    }
+}
+
+void SDF::visualizeBelongs(const Eigen::MatrixXi& belong, const Eigen::Vector2d& tl, cv::Mat& dst) const {
+    int tlx = int(tl(0) / grid_size), tly = int(tl(1) / grid_size);
+    dst.create(tly + belong.rows(), tlx + belong.cols(), CV_8UC3);
+    int max_val = belong.maxCoeff();
+    #pragma omp parallel for num_threads(8)
+    for (int i = 0; i < belong.rows(); i++) {
+        for (int j = 0; j < belong.cols(); j++) {
+            uchar val = 255 * belong(i, j) / max_val;
+            dst.at<cv::Vec3b>(i + tly, j + tlx) = cv::Vec3b(val, val, val);
+        }
     }
 }

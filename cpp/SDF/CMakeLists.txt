@@ -35,18 +35,26 @@ aux_source_directory(
     ./src SRC
 )
 
-add_executable(Task sdf_test.cc
+add_executable(single sdf_test.cc
     ${SRC}
 )
 
-target_link_libraries(Task
+target_link_libraries(single
     ${OpenCV_LIBS}
 )
 
-add_executable(Task2 merge_sdf.cc
+add_executable(double merge_sdf.cc
     ${SRC}
 )
 
-target_link_libraries(Task2
+target_link_libraries(double
+    ${OpenCV_LIBS}
+)
+
+add_executable(march marching.cc
+    ${SRC}
+)
+
+target_link_libraries(march
     ${OpenCV_LIBS}
 )

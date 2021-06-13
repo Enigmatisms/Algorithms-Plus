@@ -5,11 +5,11 @@
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #include <iostream>
+#include <stack>
+#include <queue>
 #include "meshTypes.h"
 
 /** 基于SDF的Mesh合并方法实现 */
-
-
 
 
 const double grid_size = 1;           // Marching Square使用的grid大小
@@ -60,7 +60,7 @@ public:
      * @note 计算完插值位置之后需要顺序化
      * @note 求出的所有边先放在一个unordered_map里面，之后按照顺序组合
      */
-    void marchingSquare(const Eigen::MatrixXd& sdf1, const Eigen::MatrixXd& sdf2, const Eigen::Vector4d& tlbr, EdgeMap& dst) const;
+    void marchingSquare(const Eigen::MatrixXd& lut, EdgeMap& dst) const;
 
     void mesh2Edges(const Mesh& mesh, Edges& edges) const {
         for (size_t i = 0; i < mesh.size() - 1; i++)
@@ -73,6 +73,8 @@ public:
         mesh.push_back(edges.back().sp);
         mesh.push_back(edges.back().ep);
     }
+
+    void searchSerialize(const Eigen::Vector2d& tl, EdgeMap& emap, Mesh& mesh) const;
 public:
     void addNoise2ExistingMesh(const Mesh& src, Mesh& dst, double sig) const {
         for (const Eigen::Vector2d& pt: src) {
@@ -83,11 +85,14 @@ public:
     void visualizeValues(const Eigen::MatrixXd& vals, const Eigen::Vector2d& tl, cv::Mat& dst) const;
     void visualizeMesh(const Mesh& mesh, const cv::Vec3b& color, cv::Mat& dst) const;
     void visualizeEdges(const Edges& edges, const cv::Vec3b& color, cv::Mat& dst) const;
+    void visualizeMarchingSquare(const EdgeMap& emap, const Eigen::Vector2d& tl, const cv::Vec3b& color, cv::Mat& dst) const;
+    void visualizeAlpha(const Eigen::MatrixXd& alpha, const Eigen::Vector2d& tl, cv::Mat& dst) const;
+    void visualizeCombinedAlpha(const Eigen::MatrixXd& a1, const Eigen::MatrixXd& a2, const Eigen::Vector2d& tl, cv::Mat& dst) const;
+    void visualizeBelongs(const Eigen::MatrixXi& belong, const Eigen::Vector2d& tl, cv::Mat& dst) const;
 private:
     void linearInterp(const Vertex& vtx, const Eigen::Vector4d& vals, Edges& edges) const;
 private:
     /**
-     * 点顺序定义为： 这也是vals的(w, x, y, z) 注意激光扫描的方向是逆时针 此部分为线性插值
      * p3   边2  p2
      * 边3       边1
      * p0   边0  p1
@@ -102,5 +107,9 @@ private:
     
     std::array<Eigen::Vector2d, 4> vertices = {
         Eigen::Vector2d(0, 1), Eigen::Vector2d(1, 1), Eigen::Vector2d(1, 0), Eigen::Vector2d(0, 0)
+    };
+
+    std::array<std::pair<int, int>, 4> neighbor_4 = {
+        std::pair<int, int>({1, 0}), std::pair<int, int>({-1, 0}), std::pair<int, int>({0, 1}), std::pair<int, int>({0, -1})
     };
 };
