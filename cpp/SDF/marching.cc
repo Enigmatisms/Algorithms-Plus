@@ -2,31 +2,31 @@
 
 int main() {
     SDF sdf;
-    // Mesh mesh = {
-    //     Eigen::Vector2d(60, 120),
-    //     Eigen::Vector2d(600, 180),
-    //     Eigen::Vector2d(700, 280),
-    //     Eigen::Vector2d(750, 500),
-    //     Eigen::Vector2d(730, 600),
-    //     Eigen::Vector2d(500, 650),
-    //     Eigen::Vector2d(400, 700),
-    //     Eigen::Vector2d(300, 300),
-    //     Eigen::Vector2d(200, 600),
-    //     Eigen::Vector2d(100, 200),
-    // }, noised_mesh;
-
     Mesh mesh = {
         Eigen::Vector2d(60, 120),
-        Eigen::Vector2d(180, 160),
-        Eigen::Vector2d(290, 240),
-        Eigen::Vector2d(400, 160),
-        Eigen::Vector2d(500, 500),
-        Eigen::Vector2d(600, 400),
-        Eigen::Vector2d(700, 600),
-        Eigen::Vector2d(750, 620),
-        Eigen::Vector2d(850, 670),
-        Eigen::Vector2d(950, 680),
+        Eigen::Vector2d(600, 180),
+        Eigen::Vector2d(700, 280),
+        Eigen::Vector2d(750, 500),
+        Eigen::Vector2d(730, 600),
+        Eigen::Vector2d(500, 650),
+        Eigen::Vector2d(400, 700),
+        Eigen::Vector2d(300, 300),
+        Eigen::Vector2d(200, 600),
+        Eigen::Vector2d(100, 200),
     }, noised_mesh;
+
+    // Mesh mesh = {
+    //     Eigen::Vector2d(60, 120),
+    //     Eigen::Vector2d(180, 160),
+    //     Eigen::Vector2d(290, 240),
+    //     Eigen::Vector2d(400, 160),
+    //     Eigen::Vector2d(500, 500),
+    //     Eigen::Vector2d(600, 400),
+    //     Eigen::Vector2d(700, 600),
+    //     Eigen::Vector2d(750, 620),
+    //     Eigen::Vector2d(850, 670),
+    //     Eigen::Vector2d(950, 680),
+    // }, noised_mesh;
     Edges edges, noised_edges;
     sdf.addNoise2ExistingMesh(mesh, noised_mesh, 50);
     sdf.mesh2Edges(mesh, edges);

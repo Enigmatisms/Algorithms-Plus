@@ -119,21 +119,21 @@ void SDF::doubleMeshSDF(const Edges& eg1, const Edges& eg2, Eigen::MatrixXd& sdf
             sdf(i, j) = (v1 * w1 + v2 * w2) / (w1 + w2);
         }
     }
-    cv::Mat image, img1, img2, img3;
+    cv::Mat image, img1, img2, img3, img4;
     visualizeValues(sdf, tl, image);
     visualizeEdges(eg1, color_g, image);
     visualizeEdges(eg2, color_k, image);
     cv::imshow("disp", image);
-
     visualizeAlpha(alpha1, tl, img1);
     visualizeAlpha(alpha2, tl, img2);
+    visualizeBelongs(idx1, tl, img4);
     visualizeCombinedAlpha(alpha1, alpha2, tl, img3);
+    visualizeEdges(eg1, color_g, img4);
     cv::imshow("combined", img3);
     cv::imshow("sdf1", img1);
     cv::imshow("sdf2", img2);
+    cv::imshow("belong", img4);
     cv::waitKey(0);
-
-
 
     // visualizeEdges(eg1, color_g, image);
     // visualizeEdges(eg2, color_k, image);
@@ -152,7 +152,7 @@ void SDF::doubleMeshSDF(const Edges& eg1, const Edges& eg2, Eigen::MatrixXd& sdf
     visualizeValues(sdf, tl, image);
     visualizeMarchingSquare(emap, tl, color_b, image);
     searchSerialize(tl, emap, mesh);
-    visualizeMesh(mesh, color_k, image);
+    // visualizeMesh(mesh, color_k, image);
     cv::imshow("march", image);
     cv::waitKey(0);
 }
@@ -306,9 +306,12 @@ void SDF::searchSerialize(const Eigen::Vector2d& tl, EdgeMap& emap, Mesh& mesh) 
     its.push(emap.cbegin());
     bool push_back = true;
     while (its.empty() == false) {
+        // printf("its.size = %d\n", its.size());
         EdgeMap::const_iterator it = its.top();
         int row = it->first.first, col = it->first.second;
-        emap.erase(it);
+        if (emap.find(std::make_pair(row, col)) != emap.end())
+            emap.erase(it);
+        else break;
         its.pop();
         for (const Edge& eg: it->second) {
             Edge new_eg;
@@ -329,10 +332,14 @@ void SDF::searchSerialize(const Eigen::Vector2d& tl, EdgeMap& emap, Mesh& mesh) 
                 find_none = false;
             }
         }
-        if (find_none == true) {
+        if (find_none == true)
             push_back = false;
-            printf("PUSH_BACK = FALSE\n");
-        }
+    }
+    for (int i = 0; i < 3; i++) {
+        if (edges.size() > 0) edges.pop_front();
+        else break;
+        if (edges.size() > 0) edges.pop_back();
+        else break;
     }
     for (size_t i = 0; i < edges.size() - 1; i++)
         mesh.push_back(edges[i].sp);

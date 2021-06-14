@@ -22,6 +22,10 @@ struct Edge {
         Eigen::Vector2d normal = Eigen::Vector2d(-vec.y(), vec.x());
         return (normal.dot(ep - sp) > 0);
     }
+
+    void swap() {
+        std::swap(sp, ep);
+    }
 };
 
 typedef std::vector<Eigen::Vector2d> Mesh;
