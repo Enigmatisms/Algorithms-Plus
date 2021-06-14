@@ -22,7 +22,7 @@ void SDF::mergeMesh(const Edges& eg1, const Edges& eg2, double _gsize, Edges& ds
     Eigen::MatrixXd weights = Eigen::MatrixXd(grids(0), grids(1));
     Eigen::MatrixXd alpha = Eigen::MatrixXd(grids(0), grids(1));
     sdf.setZero();
-    #pragma omp parallel for num_threads(4)
+    // #pragma omp parallel for num_threads(4)
     for (int i = 0; i < grids(0); i++) {                    // step 4. 按照alpha + weight进行加权融合 sdf / 权重选择最大值
         for (int j = 0; j < grids(1); j++) {
             int index1 = idx1(i, j), index2 = idx2(i, j);
@@ -57,9 +57,9 @@ void SDF::mergeMesh(const Edges& eg1, const Edges& eg2, double _gsize, Edges& ds
     EdgeMap emap;   
     marchingSquare(sdf, weights, emap);                     // step 5. marching cubes 2D 算法
     visualizeValues(sdf, tl, img6);
-    visualizeMarchingSquare(emap, tl, color_k, img6);
+    // visualizeMarchingSquare(emap, tl, color_k, img6);
     searchSerialize(tl, alpha,emap, dst);                         // step 6. DFS搜索哈希表 得到顺序化的edges
-    // visualizeEdges(dst, color_b, img6);
+    visualizeEdges(dst, color_b, img6, false);
     cv::imshow("viz", img6);
     cv::waitKey(0);
 }
@@ -188,8 +188,10 @@ void SDF::singleMeshPieceSDF(const Edge& eg, const Eigen::Vector2d& tl, Eigen::M
             bool over_s = (sdot <= 0.0), over_e = (edot >= 0.0), within = ((!over_s) & (!over_e));
             if (type == NORMAL) {
                 if (within) {
-                    double dist = std::sqrt(s2p.squaredNorm() - std::pow(sdot, 2));
-                    sdf(i, j) = positive ? dist : -dist;
+                    double diff2 = s2p.squaredNorm() - std::pow(sdot, 2);
+                    if (std::abs(diff2) < 1e-5) diff2 = 0.0;
+                    else diff2 = std::sqrt(diff2);
+                    sdf(i, j) = positive ? diff2 : -diff2;
                 }
                 else if (over_e) {
                     sdf(i, j) = positive ? e2p.norm() : - e2p.norm();
@@ -202,8 +204,10 @@ void SDF::singleMeshPieceSDF(const Edge& eg, const Eigen::Vector2d& tl, Eigen::M
                 if (over_e)
                     sdf(i, j) = positive ? e2p.norm() : - e2p.norm();
                 else {
-                    double dist = std::sqrt(s2p.squaredNorm() - std::pow(sdot, 2));
-                    sdf(i, j) = positive ? dist : -dist;
+                    double diff2 = s2p.squaredNorm() - std::pow(sdot, 2);
+                    if (std::abs(diff2) < 1e-5) diff2 = 0.0;
+                    else diff2 = std::sqrt(diff2);
+                    sdf(i, j) = positive ? diff2 : -diff2;
                 }
                 Eigen::Vector2d t2p = s2p - truc;
                 bool over_truc = (t2p.dot(direct) <= 0.0);       // 是否超过边界截断位置
@@ -218,8 +222,10 @@ void SDF::singleMeshPieceSDF(const Edge& eg, const Eigen::Vector2d& tl, Eigen::M
                 if (over_s) 
                     sdf(i, j) = positive ? s2p.norm() : - s2p.norm();
                 else {
-                    double dist = std::sqrt(s2p.squaredNorm() - std::pow(sdot, 2));
-                    sdf(i, j) = positive ? dist : -dist;
+                    double diff2 = s2p.squaredNorm() - std::pow(sdot, 2);
+                    if (std::abs(diff2) < 1e-5) diff2 = 0.0;
+                    else diff2 = std::sqrt(diff2);
+                    sdf(i, j) = positive ? diff2 : -diff2;
                 }
                 Eigen::Vector2d t2p = s2p - truc;
                 bool over_truc = (t2p.dot(direct) > 0.0);
@@ -322,56 +328,67 @@ void SDF::linearInterp(const Vertex& vtx, const Eigen::Vector4d& wghts, const Ei
 
 void SDF::searchSerialize(const Eigen::Vector2d& tl, const Eigen::MatrixXd& alpha, EdgeMap& emap, Edges& result) const {
     std::stack<EdgeMap::const_iterator> its;
-    EdgeBool bools;
-    for (EdgeMap::const_iterator cit = emap.cbegin(); cit != emap.cend(); cit++) {
-        bools[std::make_pair(cit->first.first, cit->first.second)] = false;
-    }
-    std::deque<Edge> edges;
-    IntPrs prs; 
-    its.push(emap.cbegin());
-    bool push_back = true;
-    int not_found_cnt = 0;
-    while (its.empty() == false) {
-        EdgeMap::const_iterator it = its.top();
-        int row = it->first.first, col = it->first.second;
-        std::pair<int, int> pr = {row, col};
-        bools[pr] = true;
-        its.pop();
-        for (const Edge& eg: it->second) {
-            Edge new_eg;
-            new_eg.sp = Eigen::Vector2d(col, row) * grid_size + eg.sp + tl;
-            new_eg.ep = Eigen::Vector2d(col, row) * grid_size + eg.ep + tl;
-            new_eg.weight = eg.weight;
-            int tlx = tl.y() / grid_size, tly = tl.x() / grid_size;
-            if (push_back) {
-                edges.push_back(new_eg);
-                prs.emplace_back(row + tly, col + tlx);
-            }
-            else {
-                edges.push_front(new_eg);
-                prs.emplace_front(row + tly, col + tlx);
-            }
-        }
-        bool find_none = true;
-        for (const std::pair<int, int>& offset: neighbor_4) {
-            std::pair<int, int> pr(row + offset.first, col + offset.second);
-            EdgeBool::const_iterator bool_it = bools.find(pr);
-            if (bool_it != bools.end()) {
-                bool used = (*bool_it).second;
-                if (used == true) continue;
-                EdgeMap::const_iterator cit = emap.find(pr);
-                if (cit != emap.end()) {
-                    its.push(cit);
-                    find_none = false;
+    std::vector<std::deque<Edge> > container;
+    std::vector<IntPrs> pr_cache;
+    EdgeSet exist;
+    for (EdgeMap::const_iterator cit = emap.cbegin(); cit != emap.cend(); cit++)
+        exist.emplace(cit->first.first, cit->first.second);
+    while (exist.empty() == false) {                        // 循环直到所有的marching squares结果处理结束
+        container.emplace_back();
+        pr_cache.emplace_back();
+        std::deque<Edge>& edges = container.back();
+        IntPrs& prs = pr_cache.back(); 
+        std::pair<int, int> pr = *(exist.cbegin());         // pr 必然同时存在于emap / exist中
+        its.push(emap.find(pr));
+        bool push_back = true;
+        while (its.empty() == false) {                      // 每次查找到栈空
+            EdgeMap::const_iterator it = its.top();
+            int row = it->first.first, col = it->first.second;
+            std::pair<int, int> pr = {row, col};
+            EdgeSet::const_iterator set_it = exist.find(pr);
+            if (set_it != exist.end()) exist.erase(set_it);
+            its.pop();
+            for (const Edge& eg: it->second) {
+                Edge new_eg;
+                new_eg.sp = Eigen::Vector2d(col, row) * grid_size + eg.sp + tl;
+                new_eg.ep = Eigen::Vector2d(col, row) * grid_size + eg.ep + tl;
+                new_eg.weight = eg.weight;
+                int tlx = tl.y() / grid_size, tly = tl.x() / grid_size;
+                if (push_back) {
+                    edges.push_back(new_eg);
+                    prs.emplace_back(row + tly, col + tlx);
+                }
+                else {
+                    edges.push_front(new_eg);
+                    prs.emplace_front(row + tly, col + tlx);
                 }
             }
-        }
-        if (find_none == true) {
-            not_found_cnt ++;
-            push_back = !push_back;
+            bool find_none = true;
+            for (const std::pair<int, int>& offset: neighbor_4) {
+                std::pair<int, int> pr(row + offset.first, col + offset.second);
+                EdgeSet::const_iterator set_it = exist.find(pr);
+                if (set_it != exist.end()) {
+                    EdgeMap::const_iterator cit = emap.find(pr);
+                    if (cit != emap.end()) {
+                        its.push(cit);
+                        find_none = false;
+                    }
+                }
+            }
+            if (find_none == true)
+                push_back = !push_back;
         }
     }
-    printf("Not found counter: %d\n", not_found_cnt);
+    size_t max_index = 0, max_sz = 0;
+    for (size_t i = 0; i < container.size(); i++) {
+        size_t sz = container[i].size();
+        if (sz > max_sz) {
+            max_index = i;
+            max_sz = sz;
+        }
+    }
+    std::deque<Edge>& edges = container[max_index];
+    const IntPrs& prs = pr_cache[max_index]; 
     for (IntPrs::const_iterator cit = prs.cbegin(); edges.size() > 1; cit++) {
         if (alpha(cit->first, cit->second) < threshold) {
             edges.pop_front();
@@ -422,7 +439,7 @@ void SDF::visualizeMesh(const Mesh& mesh, const cv::Vec3b& color, cv::Mat& dst) 
     }
 }
 
-void SDF::visualizeEdges(const Edges& edges, const cv::Vec3b& color, cv::Mat& dst) const {
+void SDF::visualizeEdges(const Edges& edges, const cv::Vec3b& color, cv::Mat& dst, bool output) const {
     for (const Edge& eg: edges) {
         cv::Point p1(eg.sp.x() / grid_size, eg.sp.y() / grid_size);
         cv::Point p2(eg.ep.x() / grid_size, eg.ep.y() / grid_size);

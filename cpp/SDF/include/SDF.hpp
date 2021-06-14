@@ -95,7 +95,7 @@ public:
     // =====================  DEBUG ========================
     void visualizeValues(const Eigen::MatrixXd& vals, const Eigen::Vector2d& tl, cv::Mat& dst) const;
     void visualizeMesh(const Mesh& mesh, const cv::Vec3b& color, cv::Mat& dst) const;
-    void visualizeEdges(const Edges& edges, const cv::Vec3b& color, cv::Mat& dst) const;
+    void visualizeEdges(const Edges& edges, const cv::Vec3b& color, cv::Mat& dst, bool output = false) const;
     void visualizeMarchingSquare(const EdgeMap& emap, const Eigen::Vector2d& tl, const cv::Vec3b& color, cv::Mat& dst) const;
     void visualizeAlpha(const Eigen::MatrixXd& alpha, const Eigen::Vector2d& tl, cv::Mat& dst) const;
     void visualizeCombinedAlpha(const Eigen::MatrixXd& a1, const Eigen::MatrixXd& a2, const Eigen::Vector2d& tl, cv::Mat& dst) const;

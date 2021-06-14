@@ -20,8 +20,9 @@ int main(int argc, char** argv) {
         Eigen::Vector2d(100, 200),
     }, noised_mesh;
     Mesh mesh2 = {
-        Eigen::Vector2d(730, 600),
-        Eigen::Vector2d(500, 650),
+        Eigen::Vector2d(300, 300),
+        Eigen::Vector2d(200, 600),
+        Eigen::Vector2d(100, 200),
     };
 
     // Mesh mesh = {

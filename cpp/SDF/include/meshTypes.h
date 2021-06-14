@@ -4,6 +4,7 @@
 #include <Eigen/Dense>
 #include <queue>
 #include <vector>
+#include <unordered_set>
 #include <unordered_map>
 #include <opencv2/core.hpp>
 
@@ -50,7 +51,7 @@ struct equalFunctor {
 };
 
 typedef std::unordered_map<std::pair<int, int>, Edges, hashFunctor, equalFunctor> EdgeMap;
-typedef std::unordered_map<std::pair<int, int>, bool, hashFunctor, equalFunctor> EdgeBool;
+typedef std::unordered_set<std::pair<int, int>, hashFunctor> EdgeSet;
 typedef std::deque<std::pair<int, int> > IntPrs;
 
 extern const cv::Vec3b color_r;
