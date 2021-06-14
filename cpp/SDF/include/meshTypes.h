@@ -1,7 +1,8 @@
 #pragma once
-
+/// @brief mergeMesh SDF types
 #include <Eigen/Core>
 #include <Eigen/Dense>
+#include <queue>
 #include <vector>
 #include <unordered_map>
 #include <opencv2/core.hpp>
@@ -49,6 +50,8 @@ struct equalFunctor {
 };
 
 typedef std::unordered_map<std::pair<int, int>, Edges, hashFunctor, equalFunctor> EdgeMap;
+typedef std::unordered_map<std::pair<int, int>, bool, hashFunctor, equalFunctor> EdgeBool;
+typedef std::deque<std::pair<int, int> > IntPrs;
 
 extern const cv::Vec3b color_r;
 extern const cv::Vec3b color_y;

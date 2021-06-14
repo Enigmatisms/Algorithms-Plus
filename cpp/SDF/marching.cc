@@ -1,7 +1,12 @@
 #include "include/SDF.hpp"
 
-int main() {
-    SDF sdf;
+int main(int argc, char** argv) {
+    if (argc < 2) {
+        std::cerr << "Usage: ./march <threshold>";
+        return -1;
+    }
+    double threshold = atof(argv[1]);
+    SDF sdf(threshold);
     Mesh mesh = {
         Eigen::Vector2d(60, 120),
         Eigen::Vector2d(600, 180),
@@ -14,6 +19,10 @@ int main() {
         Eigen::Vector2d(200, 600),
         Eigen::Vector2d(100, 200),
     }, noised_mesh;
+    Mesh mesh2 = {
+        Eigen::Vector2d(730, 600),
+        Eigen::Vector2d(500, 650),
+    };
 
     // Mesh mesh = {
     //     Eigen::Vector2d(60, 120),
@@ -27,12 +36,18 @@ int main() {
     //     Eigen::Vector2d(850, 670),
     //     Eigen::Vector2d(950, 680),
     // }, noised_mesh;
-    Edges edges, noised_edges;
-    sdf.addNoise2ExistingMesh(mesh, noised_mesh, 50);
+    // Mesh mesh2 = {
+    //     Eigen::Vector2d(500, 500),
+    //     Eigen::Vector2d(600, 400),
+    //     Eigen::Vector2d(700, 600),
+    //     Eigen::Vector2d(750, 620),
+    // };
+    Edges edges, noised_edges, results;
+    sdf.addNoise2ExistingMesh(mesh2, noised_mesh, 5);
     sdf.mesh2Edges(mesh, edges);
     sdf.mesh2Edges(noised_mesh, noised_edges);
     Eigen::MatrixXd sdf_res, alpha, noised_res, noised_alpha;
     Eigen::MatrixXi belongs, noised;
-    sdf.doubleMeshSDF(edges, noised_edges, sdf_res);
+    sdf.mergeMesh(edges, noised_edges, 1.0, results);
     return 0;
 }

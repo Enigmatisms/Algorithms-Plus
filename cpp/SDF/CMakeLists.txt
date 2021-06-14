@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(Task)
-set(CMAKE_BUILD_TYPE "release")
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 set(CMAKE_PREFIX_PATH "/home/sentinel/opencv-4.5.1/")
@@ -33,22 +32,6 @@ link_directories(
 
 aux_source_directory(
     ./src SRC
-)
-
-add_executable(single sdf_test.cc
-    ${SRC}
-)
-
-target_link_libraries(single
-    ${OpenCV_LIBS}
-)
-
-add_executable(double merge_sdf.cc
-    ${SRC}
-)
-
-target_link_libraries(double
-    ${OpenCV_LIBS}
 )
 
 add_executable(march marching.cc
