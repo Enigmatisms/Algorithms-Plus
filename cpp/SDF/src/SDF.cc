@@ -22,7 +22,7 @@ void SDF::mergeMesh(const Edges& eg1, const Edges& eg2, double _gsize, Edges& ds
     Eigen::MatrixXd weights = Eigen::MatrixXd(grids(0), grids(1));
     Eigen::MatrixXd alpha = Eigen::MatrixXd(grids(0), grids(1));
     sdf.setZero();
-    // #pragma omp parallel for num_threads(4)
+    #pragma omp parallel for num_threads(4)
     for (int i = 0; i < grids(0); i++) {                    // step 4. 按照alpha + weight进行加权融合 sdf / 权重选择最大值
         for (int j = 0; j < grids(1); j++) {
             int index1 = idx1(i, j), index2 = idx2(i, j);
@@ -30,37 +30,18 @@ void SDF::mergeMesh(const Edges& eg1, const Edges& eg2, double _gsize, Edges& ds
             double wt1 = eg1[index1].weight, wt2 = eg2[index2].weight;
             double u1 = alpha1(i, j) * wt1, u2 = alpha2(i, j) * wt2;
             alpha(i, j) = (u1 + u2) / (wt1 + wt2);
-            sdf(i, j) = (v1 * 2 * u1 + v2 * u2) / (2 * u1 + u2);
+            sdf(i, j) = (v1 * u1 + v2 * u2) / (u1 + u2);
             weights(i, j) = std::max(eg1[index1].weight, eg2[index2].weight);
         }
     }
-    cv::Mat image, img1, img2, img3, img4, img5, img6, img7;
-    visualizeValues(sdf, tl, image);
-    visualizeValues(sdf2, tl, img7);
-    visualizeEdges(eg1, color_g, image);
-    visualizeEdges(eg2, color_k, image);
-    cv::imshow("disp", image);
-    visualizeAlpha(alpha1, tl, img1);
-    visualizeAlpha(alpha2, tl, img2);
-    visualizeAlpha(alpha, tl, img5);
-    visualizeBelongs(idx2, tl, img4);
-    visualizeCombinedAlpha(alpha1, alpha2, tl, img3);
-    visualizeEdges(eg1, color_g, img4);
-    cv::imshow("combined", img3);
-    cv::imshow("sdf1", img1);
-    cv::imshow("sdf2", img2);
-    cv::imshow("belong", img4);
-    cv::imshow("alpha", img5);
-    cv::imshow("sdf", img7);
-    cv::waitKey(0);
     
+    cv::Mat image;
     EdgeMap emap;   
     marchingSquare(sdf, weights, emap);                     // step 5. marching cubes 2D 算法
-    visualizeValues(sdf, tl, img6);
-    // visualizeMarchingSquare(emap, tl, color_k, img6);
+    visualizeValues(sdf, tl, image);
     searchSerialize(tl, alpha,emap, dst);                         // step 6. DFS搜索哈希表 得到顺序化的edges
-    visualizeEdges(dst, color_b, img6, false);
-    cv::imshow("viz", img6);
+    visualizeEdges(dst, color_b, image, false);
+    cv::imshow("viz", image);
     cv::waitKey(0);
 }
 
@@ -479,14 +460,14 @@ void SDF::visualizeCombinedAlpha(const Eigen::MatrixXd& a1, const Eigen::MatrixX
     #pragma omp parallel for num_threads(8)
     for (int i = 0; i < a.rows(); i++) {
         for (int j = 0; j < a.cols(); j++) {
-            uchar val = a(i, j) / max_val * 255;
+            // uchar val = a(i, j) / max_val * 255;
+            // dst.at<cv::Vec3b>(i + tly, j + tlx) = cv::Vec3b(val, val, val);
+            uchar val = 0;
+            if (a(i, j) > threshold) {
+                val = 255;
+            }
             dst.at<cv::Vec3b>(i + tly, j + tlx) = cv::Vec3b(val, val, val);
         }
-        // uchar val = 0;
-        //     if (alpha(i, j) > threshold) {
-        //         val = 255;
-        //     }
-        //     dst.at<cv::Vec3b>(i + tly, j + tlx) = cv::Vec3b(val, val, val);
     }
 }
 
