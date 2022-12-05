@@ -10,7 +10,7 @@ from collections import deque
 # Kalman Filter implemented via Python
 # Use a simple 6 * 6 CA model
 class KalmanFilter:
-    def __init__(self, max_len):
+    def __init__(self, max_len, length):
         self.dq = deque([], maxlen = max_len)
         if max_len & 1:
             self.med_dq = deque([], maxlen = max_len)
